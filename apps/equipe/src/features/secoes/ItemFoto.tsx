@@ -8,8 +8,14 @@ import {
   Location24Regular,
 } from '@fluentui/react-icons';
 import { Aviso, Botao, Cartao, Medalhao, Selo } from '@montaje/ui';
-import { db, type ItemLocal } from '@/db/schema';
-import { marcarEmMontagem, removerFotoDoItem, salvarFotoDoItem } from '@/db/repo';
+import { type ItemLocal } from '@/db/schema';
+import {
+  atualizarGeolocalizacaoDaEvidencia,
+  evidenciaDoItem,
+  marcarEmMontagem,
+  removerFotoDoItem,
+  salvarFotoDoItem,
+} from '@/db/repo';
 import { obterLocalizacao } from '@/features/midia/geo';
 import { useSessao } from '@/features/auth/store';
 import { useObjectUrl } from '@/lib/use-object-url';
@@ -71,38 +77,58 @@ export function ItemFoto({
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const evidencia = useLiveQuery(
-    () => db.evidencias.where('item_id').equals(item.id).first(),
-    [item.id],
-  );
+  const evidencia = useLiveQuery(() => evidenciaDoItem(item.id), [item.id]);
   const previa = useObjectUrl(evidencia?.thumbBlob);
 
   const temFoto = Boolean(evidencia);
 
   async function aoEscolher(evento: ChangeEvent<HTMLInputElement>) {
-    const arquivo = evento.target.files?.[0];
-    evento.target.value = ''; // permite escolher de novo o mesmo arquivo
-    if (!arquivo) return;
+    const entrada = evento.target;
+    const arquivo = entrada.files?.[0];
+    if (!arquivo) {
+      entrada.value = '';
+      return;
+    }
 
     setErro(null);
     setProcessando(true);
     try {
       // A compressao so e carregada quando o usuario tira a primeira foto.
       const { processarFoto } = await import('@/features/midia/compressao');
-      // Compressao e localizacao correm em paralelo; o GPS e opcional.
-      const [foto, coordenada] = await Promise.all([processarFoto(arquivo), obterLocalizacao()]);
-      await salvarFotoDoItem(item.id, secaoId, {
+      const foto = await processarFoto(arquivo);
+
+      // Grava a foto imediatamente, sem esperar o GPS: a evidencia nunca se perde
+      // por causa de sinal ruim e a previa aparece na hora.
+      const evidenciaId = await salvarFotoDoItem(item.id, secaoId, {
         blob: foto.blob,
         thumbBlob: foto.thumb,
         capturadaEm: new Date().toISOString(),
-        latitude: coordenada?.latitude ?? null,
-        longitude: coordenada?.longitude ?? null,
+        latitude: null,
+        longitude: null,
         autorId: perfil?.id ?? null,
       });
       await marcarEmMontagem(secaoId, item.etapa);
-    } catch {
-      setErro('Nao foi possivel processar a foto. Tente novamente.');
+
+      // A localizacao e opcional: buscada em segundo plano e anexada a evidencia.
+      void obterLocalizacao()
+        .then((coordenada) => {
+          if (coordenada) {
+            return atualizarGeolocalizacaoDaEvidencia(evidenciaId, coordenada);
+          }
+          return undefined;
+        })
+        .catch(() => undefined);
+    } catch (causa) {
+      console.error('[ItemFoto] falha ao processar/salvar a foto', causa);
+      setErro(
+        causa instanceof Error && causa.message
+          ? `Nao foi possivel salvar a foto (${causa.message}). Tente novamente.`
+          : 'Nao foi possivel salvar a foto. Tente novamente.',
+      );
     } finally {
+      // Limpa o input so depois de ler o arquivo: em alguns navegadores moveis,
+      // redefinir o value antes da leitura invalida o File selecionado.
+      entrada.value = '';
       setProcessando(false);
     }
   }

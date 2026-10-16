@@ -160,7 +160,27 @@ export async function baixarDadosDoDia(): Promise<ResultadoDownload> {
       await db.validacoes.bulkPut(validRes.data ?? []);
       await db.sigilo.bulkPut(sigilo.map((r) => ({ ...r, syncState: 'enviado' as const })));
       await db.desvios.bulkPut(desvios.map((d) => ({ ...d, syncState: 'enviado' as const })));
-      await db.evidencias.bulkPut(evidencias.map((e) => ({ ...e, syncState: 'enviado' as const })));
+      // Evidencias: nunca sobrescreve a foto capturada no aparelho e ainda nao enviada
+      // (que carrega o blob) nem duplica, para o mesmo item, um registro do servidor
+      // sem binario — isso faria a previa "sumir mesmo tendo sido salva".
+      for (const evidencia of evidencias) {
+        const locais = await db.evidencias.where('item_id').equals(evidencia.item_id).toArray();
+        const temLocalPendente = locais.some(
+          (l) => l.syncState === 'pendente_envio' || l.syncState === 'erro',
+        );
+        if (temLocalPendente) continue;
+
+        for (const local of locais) {
+          if (local.id !== evidencia.id) await db.evidencias.delete(local.id);
+        }
+        const existente = await db.evidencias.get(evidencia.id);
+        await db.evidencias.put({
+          ...evidencia,
+          blob: existente?.blob,
+          thumbBlob: existente?.thumbBlob,
+          syncState: 'enviado' as const,
+        });
+      }
       if (layoutRes.data?.[0]) await db.layout.put(layoutRes.data[0]);
       await db.meta.put({ chave: 'ultima_sincronizacao', valor: em, atualizadoEm: Date.now() });
     },

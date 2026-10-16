@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
 import { Cartao, Selo } from '@montaje/ui';
 import { db, type ItemLocal } from '@/db/schema';
+import { evidenciaDoItem } from '@/db/repo';
 import { useObjectUrl } from '@/lib/use-object-url';
 
 const useClasses = makeStyles({
@@ -33,10 +34,7 @@ const useClasses = makeStyles({
 /** Uma foto da Etapa 1 usada como referencia (miniatura + nome do item). */
 function ReferenciaFoto({ item }: { item: ItemLocal }) {
   const c = useClasses();
-  const evidencia = useLiveQuery(
-    () => db.evidencias.where('item_id').equals(item.id).first(),
-    [item.id],
-  );
+  const evidencia = useLiveQuery(() => evidenciaDoItem(item.id), [item.id]);
   const url = useObjectUrl(evidencia?.thumbBlob);
 
   return (

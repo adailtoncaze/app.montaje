@@ -115,7 +115,7 @@ export async function salvarFotoDoItem(
     longitude: number | null;
     autorId: string | null;
   },
-): Promise<void> {
+): Promise<string> {
   const agora = new Date().toISOString();
   const id = novoId();
   const ts = Date.now();
@@ -153,6 +153,39 @@ export async function salvarFotoDoItem(
     await enfileirar('evidencia', id);
     await enfileirar('item', itemId);
   });
+
+  return id;
+}
+
+/**
+ * APP-13 — complementa a foto com a geolocalizacao obtida em segundo plano.
+ * Nao bloqueia o salvamento da evidencia: a foto ja esta gravada antes disso.
+ */
+export async function atualizarGeolocalizacaoDaEvidencia(
+  evidenciaId: string,
+  coordenada: { latitude: number; longitude: number },
+): Promise<void> {
+  const atual = await db.evidencias.get(evidenciaId);
+  if (!atual) return;
+
+  await db.transaction('rw', db.evidencias, db.outbox, async () => {
+    await db.evidencias.update(evidenciaId, {
+      latitude: coordenada.latitude,
+      longitude: coordenada.longitude,
+      syncState: 'pendente_envio',
+      updated_at: new Date().toISOString(),
+    });
+    await enfileirar('evidencia', evidenciaId);
+  });
+}
+
+/**
+ * Retorna a evidencia de um item priorizando o registro que ainda tem a imagem
+ * local (blob/miniatura). Protege contra bases com metadados do servidor sem binario.
+ */
+export async function evidenciaDoItem(itemId: string): Promise<EvidenciaLocal | undefined> {
+  const lista = await db.evidencias.where('item_id').equals(itemId).toArray();
+  return lista.find((e) => e.thumbBlob ?? e.blob) ?? lista[0];
 }
 
 /** Remove a foto do item e devolve o item para pendente. */
