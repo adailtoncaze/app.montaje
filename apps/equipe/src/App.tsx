@@ -6,6 +6,8 @@ import { AppShell } from './app/AppShell';
 import { MeusLocais } from '@/features/locais/MeusLocais';
 import { LocalDetalhe } from '@/features/locais/LocalDetalhe';
 import { SecaoDetalhe } from '@/features/secoes/SecaoDetalhe';
+import { ChecklistEtapa } from '@/features/secoes/ChecklistEtapa';
+import { ResumoEtapa } from '@/features/secoes/ResumoEtapa';
 import { Sincronizacao } from '@/features/sync/Sincronizacao';
 import { Configuracoes } from '@/features/config/Configuracoes';
 
@@ -31,6 +33,14 @@ export function App() {
         <Route
           path="/locais/:localId/secoes/:secaoId"
           element={<SecaoDetalhe />}
+        />
+        <Route
+          path="/locais/:localId/secoes/:secaoId/etapa/:etapa"
+          element={<ChecklistEtapa />}
+        />
+        <Route
+          path="/locais/:localId/secoes/:secaoId/etapa/:etapa/resumo"
+          element={<ResumoEtapa />}
         />
         <Route path="/sincronizacao" element={<Sincronizacao />} />
         <Route path="/config" element={<Configuracoes />} />

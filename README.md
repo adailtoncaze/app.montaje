@@ -111,6 +111,35 @@ O visual dos dois apps segue o **design system do Microsoft Teams**, implementad
 > O Tailwind foi **removido** do projeto. Para novas telas, use os componentes de `@montaje/ui`
 > e `makeStyles` + `tokens` do Fluent — evite reintroduzir uma segunda biblioteca de estilos.
 
+## Fluxo de campo (app da equipe)
+
+Navegação: **Meus locais → Local → Seções do local → Etapa**. O checklist é preenchido por
+etapa, com fotos e confirmações, tudo **offline** (IndexedDB é a fonte da verdade).
+
+- **Checklist da etapa** (`src/features/secoes/ChecklistEtapa.tsx`): lista os itens da etapa
+  (fotos e confirmações), com barra de progresso e status. A **Etapa 2** só abre depois da
+  aprovação da Etapa 1; caso contrário mostra o motivo do bloqueio.
+- **Fotos** (`ItemFoto.tsx`): a foto é tirada **na hora** (`<input capture="environment">`, abre a
+  câmera do aparelho), com aviso **"Não fotografe pessoas"** e opção de **Refazer/Remover** antes
+  do envio. Guarda data/hora e, quando disponível, a **geolocalização** (até 8s; se falhar, a foto
+  é salva mesmo assim).
+- **Compressão** (`src/features/midia/compressao.ts`): imagem principal em até **1280px**,
+  **JPEG ~70%** e alvo de **≤250KB**, mais uma **miniatura de 320px**. A recompressão também
+  remove o EXIF. A biblioteca de compressão é carregada **sob demanda** (só ao tirar a primeira
+  foto), para não pesar no primeiro acesso pelo celular.
+- **Confirmações** (`ItemConfirmacao.tsx`): **Sim/Não** + observação opcional. Responder move a
+  seção de `pendente` para `em_montagem`.
+- **Desvio** (APP-22, em `ItemConfirmacao.tsx`): ao responder **Não**, o app permite registrar o
+  **motivo** (espaço insuficiente, estrutura do local, mobiliário ou outro) + observação —
+  obrigatória quando o motivo for "Outro". Voltar a resposta para "Sim" remove o desvio.
+- **Resumo e envio** (`ResumoEtapa.tsx`): o envio da etapa fica **bloqueado** enquanto houver
+  fotos ou confirmações pendentes (lista o que falta). Mostra o comentário quando o cartório
+  pede **correção** e permite reenviar.
+- **Referência da Etapa 1** (APP-20, `ReferenciaEtapa1.tsx`): na Etapa 2, mostra as fotos da
+  Etapa 1 para comparação antes de registrar a foto 4.
+- Cada foto/registro vira uma linha local com **UUID gerado no aparelho** (idempotência do sync) e
+  entra na **fila de envio** (outbox). O envio em si é dos tickets APP-23/24.
+
 ## Instalação (PWA)
 
 O app da equipe é uma PWA (`vite-plugin-pwa`, service worker com *auto update*) e agora tem um
