@@ -1,0 +1,21 @@
+/* Base mínima. O tema, tipografia e cores vêm do design system (Fluent 2 / Teams)
+   aplicado pelo <ProvedorMontaje /> via tokens. */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f5f5f5;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

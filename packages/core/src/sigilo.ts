@@ -1,0 +1,41 @@
+import type { Etapa } from './enums';
+
+/**
+ * Perguntas de sigilo do voto (secao 8.2 do PRD).
+ * Ficam como constantes compartilhadas (nao viram tabela no MVP).
+ * `critica: true` marca a pergunta eliminatória da Etapa 2 (regra 1).
+ */
+
+export interface PerguntaSigilo {
+  id: string;
+  etapa: Etapa;
+  texto: string;
+  critica: boolean;
+}
+
+export const PERGUNTAS_SIGILO: PerguntaSigilo[] = [
+  {
+    id: 'sigilo-e2-tela-teclado',
+    etapa: 2,
+    texto:
+      'A tela e o teclado da urna ficam fora da visão de portas, janelas, fila, mesários e fiscais?',
+    critica: true,
+  },
+  {
+    id: 'sigilo-e2-posicao',
+    etapa: 2,
+    texto: 'A urna foi instalada na posição definida e aprovada na Etapa 1?',
+    critica: true,
+  },
+];
+
+export function perguntasDaEtapa(etapa: Etapa): PerguntaSigilo[] {
+  return PERGUNTAS_SIGILO.filter((p) => p.etapa === etapa);
+}
+
+/** Regra 1: qualquer resposta "nao" numa pergunta de sigilo torna a secao nao conforme. */
+export function sigiloConforme(
+  respostas: Array<{ critica: boolean; resposta: boolean | null }>,
+): boolean {
+  return respostas.every((r) => r.resposta !== false);
+}

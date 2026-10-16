@@ -1,0 +1,13 @@
+/* Base mínima. O tema vem do design system (Fluent 2 / Teams) via <ProvedorMontaje />. */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f5f5f5;
+  -webkit-tap-highlight-color: transparent;
+}

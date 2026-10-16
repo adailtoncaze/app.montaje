@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MontaJE">
+  <rect width="512" height="512" rx="96" fill="#5b5fc7"/>
+  <rect x="136" y="96" width="240" height="240" rx="24" fill="#ffffff"/>
+  <rect x="176" y="136" width="160" height="48" rx="8" fill="#5b5fc7"/>
+  <rect x="176" y="200" width="160" height="96" rx="8" fill="#c7c9f4"/>
+  <rect x="200" y="368" width="112" height="56" rx="12" fill="#ffffff"/>
+</svg>
