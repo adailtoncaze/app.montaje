@@ -16,9 +16,20 @@ import {
   removerFotoDoItem,
   salvarFotoDoItem,
 } from '@/db/repo';
+import { CameraApp } from '@/features/midia/CameraApp';
 import { obterLocalizacao } from '@/features/midia/geo';
 import { useSessao } from '@/features/auth/store';
 import { useObjectUrl } from '@/lib/use-object-url';
+
+/** Camera ao vivo só existe em contexto seguro (HTTPS/localhost). */
+function temCameraAoVivo(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    typeof navigator.mediaDevices?.getUserMedia === 'function' &&
+    typeof window !== 'undefined' &&
+    window.isSecureContext
+  );
+}
 
 const useClasses = makeStyles({
   corpo: {
@@ -76,26 +87,21 @@ export function ItemFoto({
   const entradaRef = useRef<HTMLInputElement>(null);
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [cameraAberta, setCameraAberta] = useState(false);
 
   const evidencia = useLiveQuery(() => evidenciaDoItem(item.id), [item.id]);
   const previa = useObjectUrl(evidencia?.thumbBlob);
 
   const temFoto = Boolean(evidencia);
 
-  async function aoEscolher(evento: ChangeEvent<HTMLInputElement>) {
-    const entrada = evento.target;
-    const arquivo = entrada.files?.[0];
-    if (!arquivo) {
-      entrada.value = '';
-      return;
-    }
-
+  /** Comprime, grava a foto e anexa a localizacao (em segundo plano). */
+  async function processarESalvar(origem: Blob) {
     setErro(null);
     setProcessando(true);
     try {
       // A compressao so e carregada quando o usuario tira a primeira foto.
       const { processarFoto } = await import('@/features/midia/compressao');
-      const foto = await processarFoto(arquivo);
+      const foto = await processarFoto(origem);
 
       // Grava a foto imediatamente, sem esperar o GPS: a evidencia nunca se perde
       // por causa de sinal ruim e a previa aparece na hora.
@@ -126,10 +132,33 @@ export function ItemFoto({
           : 'Nao foi possivel salvar a foto. Tente novamente.',
       );
     } finally {
-      // Limpa o input so depois de ler o arquivo: em alguns navegadores moveis,
-      // redefinir o value antes da leitura invalida o File selecionado.
-      entrada.value = '';
       setProcessando(false);
+    }
+  }
+
+  /** Abre a camera no app; em contexto inseguro/sem suporte, cai para o input de arquivo. */
+  function abrirCaptura() {
+    if (temCameraAoVivo()) {
+      setErro(null);
+      setCameraAberta(true);
+    } else {
+      entradaRef.current?.click();
+    }
+  }
+
+  async function aoEscolher(evento: ChangeEvent<HTMLInputElement>) {
+    const entrada = evento.target;
+    const arquivo = entrada.files?.[0];
+    if (!arquivo) {
+      entrada.value = '';
+      return;
+    }
+    // Limpa o input so depois de ler o arquivo: em alguns navegadores moveis,
+    // redefinir o value antes da leitura invalida o File selecionado.
+    try {
+      await processarESalvar(arquivo);
+    } finally {
+      entrada.value = '';
     }
   }
 
@@ -192,7 +221,7 @@ export function ItemFoto({
             carregando={processando}
             disabled={somenteLeitura}
             icon={temFoto ? <ArrowClockwise24Regular /> : <Camera24Regular />}
-            onClick={() => entradaRef.current?.click()}
+            onClick={abrirCaptura}
           >
             {temFoto ? 'Refazer' : 'Tirar foto'}
           </Botao>
@@ -209,6 +238,20 @@ export function ItemFoto({
           )}
         </div>
       </div>
+
+      {cameraAberta && (
+        <CameraApp
+          aoCapturar={(foto) => {
+            setCameraAberta(false);
+            void processarESalvar(foto);
+          }}
+          aoFechar={() => setCameraAberta(false)}
+          aoUsarArquivo={() => {
+            setCameraAberta(false);
+            entradaRef.current?.click();
+          }}
+        />
+      )}
     </Cartao>
   );
 }
