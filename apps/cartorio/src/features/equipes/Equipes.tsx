@@ -412,7 +412,7 @@ function DialogoEquipe({ equipe, onFechar }: { equipe: EquipeDetalhe; onFechar: 
   function remover(membro: MembroDetalhe) {
     void executar(
       async () => {
-        await removerMembro(membro.id);
+        await removerMembro(membro.perfil_id);
         if (membro.lider) await definirLider(equipe.id, null);
       },
       { titulo: 'Membro removido', descricao: `${membro.perfil.nome} saiu da equipe.` },

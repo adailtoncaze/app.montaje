@@ -228,8 +228,13 @@ export async function adicionarMembro(
   if (error) throw new Error(traduzirErro(error.message, 'Este perfil já faz parte da equipe.'));
 }
 
-export async function removerMembro(membroId: string): Promise<void> {
-  const { error } = await supabase().from('membros_equipe').delete().eq('id', membroId);
+export async function removerMembro(perfilId: string): Promise<void> {
+  // Exclui o perfil do membro (a conta da pessoa). A linha correspondente em
+  // `membros_equipe` é removida em cascata (FK `perfil_id ... on delete cascade`),
+  // assim o membro deixa de existir efetivamente no banco. Excluir apenas de
+  // `membros_equipe` apenas desvinculava a pessoa da equipe, mas mantinha o
+  // registro em `perfis` (a pessoa ainda "existia" no sistema).
+  const { error } = await supabase().from('perfis').delete().eq('id', perfilId);
   if (error) throw new Error(error.message);
 }
 
