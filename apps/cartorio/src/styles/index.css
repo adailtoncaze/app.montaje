@@ -6,8 +6,13 @@
  *
  * Os utilitários do shadcn/ui (bg-background, text-foreground, border-border,
  * bg-primary, ...) são mapeados para os tokens oficiais do Microsoft Teams
- * (Fluent 2 — `teamsLightTheme`). Os valores abaixo foram extraídos do próprio
- * tema do Teams para manter as cores fiéis.
+ * (Fluent 2). Os valores são exatamente os de `teamsLightTheme`, seguindo a
+ * estrutura recomendada em:
+ * https://learn.microsoft.com/pt-br/microsoftteams/platform/concepts/design/design-teams-app-color
+ *   - Marca: colorBrand*
+ *   - Neutros/superfícies: colorNeutral*
+ *   - Estados: colorStatus{Success,Danger,Warning}{Background1,Foreground1,Border1}
+ *     (suaves) e Background3 (sólidos)
  */
 
 @source '../../index.html';
@@ -42,47 +47,48 @@
   --accent-pressed: #e0e0e0; /* colorSubtleBackgroundPressed */
 
   /* Perigo (ações destrutivas) */
-  --destructive: #d13438; /* colorPaletteRedBackground3 */
+  --destructive: #c50f1f; /* colorStatusDangerBackground3 */
   --destructive-foreground: #ffffff;
-  --destructive-hover: #b22c30;
+  --destructive-hover: #b10e1c; /* colorStatusDangerBackground3Hover */
 
   /* Contornos e foco */
   --border: #e0e0e0; /* colorNeutralStroke2 */
   --input: #d1d1d1; /* colorNeutralStroke1 */
   --ring: #5b5fc7;
 
-  /* Estados — versões "suaves" (avisos/mensagens) */
-  --info: #4f52b2;
-  --info-bg: #e8ebfa;
-  --info-border: #c7cbf0;
-  --success: #1b7a1b; /* verde legivel para texto (tom escuro do #36cc36) */
-  --success-bg: #eafce9;
-  --success-border: #36cc36;
-  --warning: #817400; /* colorPaletteYellowForeground1 */
-  --warning-bg: #fffef5; /* colorPaletteYellowBackground1 */
-  --warning-border: #f9e2ae; /* colorPaletteMarigoldBackground2 */
+  /* Estados — suaves (avisos/mensagens): tokens colorStatus* do Teams
+     (fundo = Background1, texto = Foreground1, borda = Border1) */
+  --info: #4f52b2; /* colorBrandForeground2 */
+  --info-bg: #e8ebfa; /* colorBrandBackground2 */
+  --info-border: #c7cbf0; /* colorBrandBackground2Pressed */
+  --success: #0e700e; /* colorStatusSuccessForeground1 */
+  --success-bg: #f1faf1; /* colorStatusSuccessBackground1 */
+  --success-border: #9fd89f; /* colorStatusSuccessBorder1 */
+  --warning: #bc4b09; /* colorStatusWarningForeground1 */
+  --warning-bg: #fff9f5; /* colorStatusWarningBackground1 */
+  --warning-border: #fdcfb4; /* colorStatusWarningBorder1 */
   --danger: #b10e1c; /* colorStatusDangerForeground1 */
   --danger-bg: #fdf3f4; /* colorStatusDangerBackground1 */
-  --danger-border: #f1bbbc; /* colorPaletteRedBackground2 */
+  --danger-border: #eeacb2; /* colorStatusDangerBorder1 */
 
-  /* Estados — versões "sólidas" (selos/badges) */
-  --brand-solid: #5b5fc7;
+  /* Estados — solidos (selos): Background3 + branco (colorNeutralForegroundOnBrand) */
+  --brand-solid: #5b5fc7; /* colorBrandBackground */
   --brand-solid-foreground: #ffffff;
-  --success-solid: #36cc36; /* verde solicitado (selos/medalhoes) */
-  --success-solid-foreground: #0a3d0a;
-  --warning-solid: #fde300; /* colorPaletteYellowBackground3 */
-  --warning-solid-foreground: #242424;
-  --danger-solid: #d13438;
+  --success-solid: #107c10; /* colorStatusSuccessBackground3 */
+  --success-solid-foreground: #ffffff;
+  --warning-solid: #f7630c; /* colorStatusWarningBackground3 */
+  --warning-solid-foreground: #242424; /* colorNeutralForeground1 (contraste) */
+  --danger-solid: #c50f1f; /* colorStatusDangerBackground3 */
   --danger-solid-foreground: #ffffff;
-  --neutral-solid: #e0e0e0; /* colorNeutralStroke2 */
+  --neutral-solid: #ebebeb; /* colorNeutralBackground5 */
   --neutral-solid-foreground: #424242; /* colorNeutralForeground2 */
 
-  /* Gráficos (paleta shadcn) */
-  --chart-1: #5b5fc7;
-  --chart-2: #36cc36;
-  --chart-3: #d13438;
-  --chart-4: #d39300;
-  --chart-5: #038387;
+  /* Gráficos (tokens de status/marca do Teams) */
+  --chart-1: #5b5fc7; /* colorBrandBackground */
+  --chart-2: #107c10; /* colorStatusSuccessBackground3 */
+  --chart-3: #c50f1f; /* colorStatusDangerBackground3 */
+  --chart-4: #f7630c; /* colorStatusWarningBackground3 */
+  --chart-5: #038387; /* colorPaletteTealBorderActive */
 }
 
 @theme inline {
