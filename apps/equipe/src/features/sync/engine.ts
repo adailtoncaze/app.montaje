@@ -292,6 +292,24 @@ async function enviarEvidencia(sb: SupabaseClient, evidenciaId: string): Promise
   if (ev.blob && ev.caminho_foto) {
     await subirArquivo(sb, ev.caminho_foto, ev.blob);
   }
+
+  // 4) Substitui a foto anterior: cada item tem uma unica evidencia, e o app
+  //    local (repo.salvarFotoDoItem) ja remove a antiga no IndexedDB. Aqui a
+  //    remocao sobe para o servidor — sem ela, o cartorio continuaria vendo a
+  //    foto em desconformidade junto com a nova correcao. O objeto antigo no
+  //    bucket nao e apagado (o storage so permite delete para o cartorio), mas
+  //    deixa de ser referenciado por qualquer linha da tabela.
+  const { data: antigas, error: errBusca } = await sb
+    .from('evidencias')
+    .select('id')
+    .eq('item_id', ev.item_id)
+    .neq('id', ev.id);
+  if (errBusca) falha(`evidencia ${evidenciaId}`, errBusca.message);
+  const idsAntigas = (antigas ?? []).map((linha) => linha.id);
+  if (idsAntigas.length > 0) {
+    const { error: errDelete } = await sb.from('evidencias').delete().in('id', idsAntigas);
+    if (errDelete) falha(`evidencia ${evidenciaId}`, errDelete.message);
+  }
 }
 
 async function subirArquivo(sb: SupabaseClient, caminho: string, blob: Blob): Promise<void> {

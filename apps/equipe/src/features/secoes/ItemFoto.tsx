@@ -17,11 +17,13 @@ import {
   salvarFotoDoItem,
 } from '@/db/repo';
 import { CameraApp } from '@/features/midia/CameraApp';
+import { processarFoto } from '@/features/midia/compressao';
 import { obterLocalizacao } from '@/features/midia/geo';
 import { useSessao } from '@/features/auth/store';
 import { useObjectUrl } from '@/lib/use-object-url';
+import { useAvisos } from '@/lib/avisos';
 
-/** Camera ao vivo só existe em contexto seguro (HTTPS/localhost). */
+/** Câmera ao vivo só existe em contexto seguro (HTTPS/localhost). */
 function temCameraAoVivo(): boolean {
   return (
     typeof navigator !== 'undefined' &&
@@ -37,13 +39,47 @@ const useClasses = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
   },
+  vazio: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: tokens.spacingVerticalXS,
+    width: '100%',
+    aspectRatio: '4 / 3',
+    borderRadius: tokens.borderRadiusLarge,
+    border: `1px dashed ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    color: tokens.colorNeutralForeground3,
+    textAlign: 'center',
+    padding: tokens.spacingVerticalM,
+  },
+  vazioIcone: {
+    fontSize: '32px',
+    lineHeight: '32px',
+  },
+  previaWrap: {
+    position: 'relative',
+  },
   previa: {
+    display: 'block',
     width: '100%',
     aspectRatio: '4 / 3',
     objectFit: 'cover',
     borderRadius: tokens.borderRadiusLarge,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground3,
+  },
+  carregando: {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: tokens.borderRadiusLarge,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    color: '#ffffff',
+    fontWeight: tokens.fontWeightSemibold,
   },
   info: {
     display: 'flex',
@@ -77,12 +113,16 @@ export function ItemFoto({
   item,
   secaoId,
   somenteLeitura = false,
+  precisaCorrecao = false,
 }: {
   item: ItemLocal;
   secaoId: string;
   somenteLeitura?: boolean;
+  /** O cartório devolveu justamente este item para correção. */
+  precisaCorrecao?: boolean;
 }) {
   const c = useClasses();
+  const avisos = useAvisos();
   const perfil = useSessao((s) => s.perfil);
   const entradaRef = useRef<HTMLInputElement>(null);
   const [processando, setProcessando] = useState(false);
@@ -94,17 +134,16 @@ export function ItemFoto({
 
   const temFoto = Boolean(evidencia);
 
-  /** Comprime, grava a foto e anexa a localizacao (em segundo plano). */
+  /** Comprime, grava a foto e anexa a localização (em segundo plano). */
   async function processarESalvar(origem: Blob) {
     setErro(null);
     setProcessando(true);
     try {
-      // A compressao so e carregada quando o usuario tira a primeira foto.
-      const { processarFoto } = await import('@/features/midia/compressao');
+      // Comprime a imagem antes de gravar (normaliza tamanho e qualidade).
       const foto = await processarFoto(origem);
 
-      // Grava a foto imediatamente, sem esperar o GPS: a evidencia nunca se perde
-      // por causa de sinal ruim e a previa aparece na hora.
+      // Grava a foto imediatamente, sem esperar o GPS: a evidência nunca se perde
+      // por causa de sinal ruim e a prévia aparece na hora.
       const evidenciaId = await salvarFotoDoItem(item.id, secaoId, {
         blob: foto.blob,
         thumbBlob: foto.thumb,
@@ -114,8 +153,9 @@ export function ItemFoto({
         autorId: perfil?.id ?? null,
       });
       await marcarEmMontagem(secaoId, item.etapa);
+      avisos.sucesso('Foto registrada', item.nome);
 
-      // A localizacao e opcional: buscada em segundo plano e anexada a evidencia.
+      // A localização é opcional: buscada em segundo plano e anexada à evidência.
       void obterLocalizacao()
         .then((coordenada) => {
           if (coordenada) {
@@ -126,17 +166,18 @@ export function ItemFoto({
         .catch(() => undefined);
     } catch (causa) {
       console.error('[ItemFoto] falha ao processar/salvar a foto', causa);
-      setErro(
+      const detalhe =
         causa instanceof Error && causa.message
-          ? `Nao foi possivel salvar a foto (${causa.message}). Tente novamente.`
-          : 'Nao foi possivel salvar a foto. Tente novamente.',
-      );
+          ? `Não foi possível salvar a foto (${causa.message}). Tente novamente.`
+          : 'Não foi possível salvar a foto. Tente novamente.';
+      setErro(detalhe);
+      avisos.erro('Falha ao salvar a foto', item.nome);
     } finally {
       setProcessando(false);
     }
   }
 
-  /** Abre a camera no app; em contexto inseguro/sem suporte, cai para o input de arquivo. */
+  /** Abre a câmera no app; em contexto inseguro/sem suporte, cai para o input de arquivo. */
   function abrirCaptura() {
     if (temCameraAoVivo()) {
       setErro(null);
@@ -153,7 +194,7 @@ export function ItemFoto({
       entrada.value = '';
       return;
     }
-    // Limpa o input so depois de ler o arquivo: em alguns navegadores moveis,
+    // Limpa o input só depois de ler o arquivo: em alguns navegadores móveis,
     // redefinir o value antes da leitura invalida o File selecionado.
     try {
       await processarESalvar(arquivo);
@@ -165,27 +206,46 @@ export function ItemFoto({
   async function aoRemover() {
     setErro(null);
     await removerFotoDoItem(item.id);
+    avisos.info('Foto removida', item.nome);
   }
 
   return (
     <Cartao
       inicio={
-        <Medalhao tom={temFoto ? 'ok' : 'marca'}>{item.foto_numero ?? <Camera24Regular />}</Medalhao>
+        <Medalhao tom={precisaCorrecao ? 'erro' : temFoto ? 'ok' : 'marca'}>
+          {item.foto_numero ?? <Camera24Regular />}
+        </Medalhao>
       }
       titulo={item.nome}
-      descricao="Foto obrigatoria"
+      descricao="Foto obrigatória"
       acao={
-        <Selo
-          texto={temFoto ? 'Registrada' : 'Pendente'}
-          tom={temFoto ? 'ok' : 'neutro'}
-        />
+        precisaCorrecao ? (
+          <Selo texto="Corrigir" tom="erro" />
+        ) : (
+          <Selo texto={temFoto ? 'Registrada' : 'Pendente'} tom={temFoto ? 'ok' : 'neutro'} />
+        )
       }
     >
       <div className={c.corpo}>
+        {precisaCorrecao && (
+          <Aviso tom="erro" titulo="Foto devolvida pelo cartório">
+            Refaça a foto deste item para atender à correção solicitada.
+          </Aviso>
+        )}
+
         {erro && <Aviso tom="erro">{erro}</Aviso>}
 
-        {previa && (
-          <img className={c.previa} src={previa} alt={`Previa da foto do item: ${item.nome}`} />
+        {previa ? (
+          <div className={c.previaWrap}>
+            <img className={c.previa} src={previa} alt={`Prévia da foto do item: ${item.nome}`} />
+            {processando && <div className={c.carregando}>Salvando…</div>}
+          </div>
+        ) : (
+          <div className={c.vazio}>
+            <Camera24Regular className={c.vazioIcone} />
+            <Text size={200}>Nenhuma foto registrada</Text>
+            <Text size={200}>Toque em “Tirar foto” para capturar.</Text>
+          </div>
         )}
 
         {evidencia && (
@@ -199,7 +259,7 @@ export function ItemFoto({
                 </Text>
               </>
             ) : (
-              <Text size={200}>Localizacao nao disponivel</Text>
+              <Text size={200}>Localização não disponível</Text>
             )}
           </div>
         )}

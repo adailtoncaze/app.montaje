@@ -278,10 +278,15 @@ export async function obterSecao(secaoId: string): Promise<SecaoDetalhe> {
 
 async function buscarEvidencias(itemIds: string[]): Promise<Evidencia[]> {
   if (!itemIds.length) return [];
+  // Mais recente primeiro: quando o cartório devolve uma foto e a equipe
+  // reenvia a correção, quem importa é a foto nova — o painel sempre mostra
+  // a primeira da lista (ver ItemRevisao, em SecaoDetalhe).
   const { data, error } = await supabase()
     .from('evidencias')
     .select('*')
     .in('item_id', itemIds)
+    .order('capturada_em', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
     .returns<Evidencia[]>();
   if (error) throw new Error(error.message);
   return data ?? [];

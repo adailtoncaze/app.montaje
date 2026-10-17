@@ -14,7 +14,6 @@ const badgeVariants = cva(
         neutral: 'bg-neutral-solid text-neutral-solid-foreground',
         secondary: 'bg-muted text-muted-foreground',
         outline: 'border border-border text-foreground',
-        destructive: 'bg-destructive text-destructive-foreground',
       },
     },
     defaultVariants: { variant: 'neutral' },
@@ -23,7 +22,7 @@ const badgeVariants = cva(
 
 export type BadgeProps = ComponentProps<'span'> & VariantProps<typeof badgeVariants>;
 
-/** Selo/etiqueta no estilo do shadcn/ui com as cores de estado do Teams. */
+/** Selo/etiqueta no estilo do shadcn/ui, com as cores de estado do sistema de design. */
 export function Badge({ className, variant, ...props }: BadgeProps) {
   return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
 }

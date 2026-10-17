@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ROTULO_STATUS_ETAPA, perguntaDeSigilo, type Etapa } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
 import {
@@ -14,6 +14,9 @@ import {
   Botao,
   CabecalhoApp,
   Cartao,
+  ConteudoPagina,
+  DialogoConfirmacao,
+  EsqueletoLista,
   EstadoVazio,
   Selo,
   pontoTablet,
@@ -21,24 +24,50 @@ import {
 import { db } from '@/db/schema';
 import { enviarEtapa } from '@/db/repo';
 import { tomStatusEtapa } from '@/lib/status-ui';
+import { useAvisos } from '@/lib/avisos';
 
 const useClasses = makeStyles({
-  pagina: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalM,
-    [`@media ${pontoTablet}`]: {
-      padding: tokens.spacingVerticalL,
-      gap: tokens.spacingVerticalL,
-    },
-  },
   resumo: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: tokens.spacingHorizontalM,
     flexWrap: 'wrap',
+  },
+  contadores: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: tokens.spacingHorizontalS,
+    [`@media ${pontoTablet}`]: {
+      gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    },
+  },
+  contador: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '2px',
+    textAlign: 'center',
+    padding: tokens.spacingVerticalM,
+  },
+  numero: {
+    fontSize: '24px',
+    lineHeight: '28px',
+    fontWeight: tokens.fontWeightBold,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  numeroOk: {
+    color: tokens.colorPaletteGreenForeground1,
+  },
+  numeroAlerta: {
+    color: tokens.colorPaletteYellowForeground1,
+  },
+  numeroErro: {
+    color: tokens.colorPaletteRedForeground1,
+  },
+  rotulo: {
+    color: tokens.colorNeutralForeground3,
   },
   lista: {
     display: 'flex',
@@ -52,15 +81,46 @@ const useClasses = makeStyles({
     gap: tokens.spacingHorizontalS,
     flexWrap: 'wrap',
   },
+  bloqueio: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalXS,
+    color: tokens.colorPaletteRedForeground1,
+  },
 });
+
+function Contador({
+  valor,
+  rotulo,
+  tom,
+}: {
+  valor: number | string;
+  rotulo: string;
+  tom?: 'ok' | 'alerta' | 'erro';
+}) {
+  const c = useClasses();
+  const cor =
+    tom === 'ok' ? c.numeroOk : tom === 'alerta' ? c.numeroAlerta : tom === 'erro' ? c.numeroErro : '';
+  return (
+    <Cartao className={c.contador}>
+      <Text className={`${c.numero} ${cor}`}>{valor}</Text>
+      <Text size={200} className={c.rotulo}>
+        {rotulo}
+      </Text>
+    </Cartao>
+  );
+}
 
 export function ResumoEtapa() {
   const c = useClasses();
+  const navigate = useNavigate();
+  const avisos = useAvisos();
   const { localId = '', secaoId = '', etapa: etapaParam = '1' } = useParams();
   const etapa: Etapa = etapaParam === '2' ? 2 : 1;
 
   const [enviando, setEnviando] = useState(false);
   const [enviadoAgora, setEnviadoAgora] = useState(false);
+  const [confirmarEnvio, setConfirmarEnvio] = useState(false);
 
   const secao = useLiveQuery(() => db.secoes.get(secaoId), [secaoId]);
   const local = useLiveQuery(
@@ -105,6 +165,10 @@ export function ResumoEtapa() {
   );
   const concluidos = itens.length - pendencias.length;
 
+  const fotosTotal = itens.filter((i) => i.tipo === 'foto').length;
+  const fotosEnviadas = itens.filter((i) => i.tipo === 'foto' && comFoto.includes(i.id)).length;
+  const naoConformes = itens.filter((i) => i.resposta === false).length;
+
   // APP-21 — sigilo do voto: qualquer "nao" exige desvio registrado para liberar o envio.
   const desvioItemIds = new Set(desvios.map((d) => d.item_id));
   const sigiloItens = ordenados.filter((i) => perguntaDeSigilo(i.nome));
@@ -126,12 +190,19 @@ export function ResumoEtapa() {
   const correcao = [...validacoes]
     .filter((v) => v.etapa === etapa && v.status === 'correcao_solicitada')
     .sort((a, b) => b.data.localeCompare(a.data))[0];
+  const itemDevolvido = correcao?.item_devolvido
+    ? itens.find((i) => i.id === correcao.item_devolvido)?.nome ?? null
+    : null;
 
   async function enviar() {
     setEnviando(true);
     try {
       await enviarEtapa(secaoId, etapa);
       setEnviadoAgora(true);
+      setConfirmarEnvio(false);
+      avisos.sucesso('Etapa enviada', 'Os registros serão sincronizados com o cartório.');
+    } catch {
+      avisos.erro('Não foi possível enviar', 'Confira a conexão e tente novamente.');
     } finally {
       setEnviando(false);
     }
@@ -142,16 +213,12 @@ export function ResumoEtapa() {
       <CabecalhoApp
         titulo={`Resumo da Etapa ${etapa}`}
         subtitulo={secao ? `Seção ${secao.numero}${local ? ` · ${local.nome}` : ''}` : undefined}
-        inicio={
-          <Link to={checklist} aria-label="Voltar ao checklist" style={{ color: 'inherit' }}>
-            <ArrowLeft24Regular />
-          </Link>
-        }
+        aoVoltar={() => navigate(checklist)}
       />
 
-      <div className={c.pagina}>
+      <ConteudoPagina>
         {!secao ? (
-          <Text>Carregando resumo…</Text>
+          <EsqueletoLista itens={2} />
         ) : (
           <>
             {(enviadoAgora || jaEnviada) && (
@@ -164,7 +231,14 @@ export function ResumoEtapa() {
 
             {correcao && !jaEnviada && (
               <Aviso tom="erro" titulo="Correção solicitada pelo cartório">
-                {correcao.comentario ?? 'Corrija os itens indicados e reenvie a etapa.'}
+                {itemDevolvido && (
+                  <Text size={200} weight="semibold" block>
+                    Item a corrigir: {itemDevolvido}
+                  </Text>
+                )}
+                <Text size={200} block>
+                  {correcao.comentario ?? 'Corrija os itens indicados e reenvie a etapa.'}
+                </Text>
               </Aviso>
             )}
 
@@ -182,26 +256,53 @@ export function ResumoEtapa() {
                 titulo="Checklist ainda não baixado"
                 descricao="Os itens desta etapa não estão no aparelho. Use 'Baixar dados do dia' em Ajustes."
               />
-            ) : pendencias.length > 0 ? (
-              <Cartao
-                titulo={`${pendencias.length} item(ns) pendente(s)`}
-                descricao="Conclua os itens abaixo para liberar o envio."
-              >
-                <ul className={c.lista}>
-                  {pendencias.map((p) => (
-                    <li key={p.id}>
-                      <Text size={200}>
-                        {p.tipo === 'foto' ? 'Foto: ' : 'Confirmação: '}
-                        {p.nome}
-                      </Text>
-                    </li>
-                  ))}
-                </ul>
-              </Cartao>
             ) : (
-              <Aviso tom="sucesso" titulo="Tudo preenchido">
-                Todos os itens desta etapa estão concluídos.
-              </Aviso>
+              <>
+                <div className={c.contadores}>
+                  <Contador
+                    valor={`${concluidos}/${itens.length}`}
+                    rotulo="Itens concluídos"
+                    tom={concluidos === itens.length ? 'ok' : undefined}
+                  />
+                  <Contador
+                    valor={fotosTotal > 0 ? `${fotosEnviadas}/${fotosTotal}` : '—'}
+                    rotulo="Fotos"
+                    tom={fotosTotal > 0 && fotosEnviadas === fotosTotal ? 'ok' : undefined}
+                  />
+                  <Contador
+                    valor={pendencias.length}
+                    rotulo="Pendências"
+                    tom={pendencias.length > 0 ? 'alerta' : 'ok'}
+                  />
+                  <Contador
+                    valor={naoConformes}
+                    rotulo="Não conformes"
+                    tom={naoConformes > 0 ? 'erro' : 'ok'}
+                  />
+                </div>
+
+                {pendencias.length > 0 ? (
+                  <Cartao
+                    titulo={`${pendencias.length} item(ns) pendente(s)`}
+                    descricao="Conclua os itens abaixo para liberar o envio."
+                  >
+                    <ul className={c.lista}>
+                      {pendencias.map((p) => (
+                        <li key={p.id}>
+                          <Text size={200}>
+                            {p.tipo === 'foto' ? 'Foto: ' : 'Confirmação: '}
+                            {p.nome}
+                          </Text>
+                        </li>
+                      ))}
+                    </ul>
+                  </Cartao>
+                ) : (
+                  <Aviso tom="sucesso" titulo="Tudo preenchido">
+                    Todos os itens desta etapa estão concluídos.
+                  </Aviso>
+                )}
+              </>
             )}
 
             {etapa === 2 && sigiloItens.length > 0 && (
@@ -240,11 +341,13 @@ export function ResumoEtapa() {
             )}
 
             <div className={c.acoes}>
-              <Link to={checklist} style={{ textDecoration: 'none' }}>
-                <Botao variante="secundario" icon={<ArrowLeft24Regular />}>
-                  Revisar checklist
-                </Botao>
-              </Link>
+              <Botao
+                variante="secundario"
+                icon={<ArrowLeft24Regular />}
+                onClick={() => navigate(checklist)}
+              >
+                Revisar checklist
+              </Botao>
 
               {jaEnviada ? (
                 <Botao variante="primario" disabled icon={<CheckmarkCircle24Regular />}>
@@ -256,7 +359,7 @@ export function ResumoEtapa() {
                   icon={<CheckmarkCircle24Regular />}
                   carregando={enviando}
                   disabled={!podeEnviar}
-                  onClick={enviar}
+                  onClick={() => setConfirmarEnvio(true)}
                 >
                   Enviar etapa
                 </Botao>
@@ -264,14 +367,14 @@ export function ResumoEtapa() {
             </div>
 
             {!jaEnviada && pendencias.length > 0 && (
-              <div className={c.acoes}>
+              <div className={c.bloqueio}>
                 <Dismiss24Regular />
                 <Text size={200}>O envio fica bloqueado enquanto houver pendências.</Text>
               </div>
             )}
 
             {!jaEnviada && bloqueioSigilo && (
-              <div className={c.acoes}>
+              <div className={c.bloqueio}>
                 <Dismiss24Regular />
                 <Text size={200}>
                   O envio fica bloqueado enquanto o desvio do sigilo do voto não for registrado.
@@ -280,7 +383,17 @@ export function ResumoEtapa() {
             )}
           </>
         )}
-      </div>
+      </ConteudoPagina>
+
+      <DialogoConfirmacao
+        aberto={confirmarEnvio}
+        aoFechar={() => setConfirmarEnvio(false)}
+        titulo={`Enviar a Etapa ${etapa}?`}
+        descricao="Após o envio, a edição fica bloqueada até o cartório validar. Confirme que as fotos e respostas estão corretas."
+        rotuloConfirmar="Enviar etapa"
+        carregando={enviando}
+        aoConfirmar={enviar}
+      />
     </>
   );
 }

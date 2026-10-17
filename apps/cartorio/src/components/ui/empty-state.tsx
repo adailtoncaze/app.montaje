@@ -14,14 +14,18 @@ export function EmptyState({ icone, titulo, descricao, acao, className }: EmptyS
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card px-6 py-12 text-center',
+        'flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card px-6 py-14 text-center',
         className,
       )}
     >
-      {icone && <div className="text-muted-foreground [&_svg]:size-8">{icone}</div>}
-      <p className="text-base font-semibold text-foreground">{titulo}</p>
+      {icone && (
+        <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground [&_svg]:size-6">
+          {icone}
+        </span>
+      )}
+      <p className="text-base font-semibold tracking-tight text-foreground">{titulo}</p>
       {descricao && <p className="max-w-md text-sm text-muted-foreground">{descricao}</p>}
-      {acao && <div className="mt-2">{acao}</div>}
+      {acao && <div className="mt-1">{acao}</div>}
     </div>
   );
 }

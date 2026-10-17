@@ -22,31 +22,109 @@ const useClasses = makeStyles({
     zIndex: 1000,
     display: 'flex',
     flexDirection: 'column',
+    gap: tokens.spacingVerticalM,
+    boxSizing: 'border-box',
+    paddingTop: `calc(${tokens.spacingVerticalM} + env(safe-area-inset-top, 0px))`,
+    paddingBottom: `calc(${tokens.spacingVerticalM} + env(safe-area-inset-bottom, 0px))`,
+    paddingLeft: tokens.spacingHorizontalM,
+    paddingRight: tokens.spacingHorizontalM,
+    backgroundColor: tokens.colorNeutralBackgroundStatic,
+    color: tokens.colorNeutralForegroundStaticInverted,
+  },
+  topo: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacingHorizontalM,
+    minHeight: '48px',
+  },
+  titulo: {
+    color: tokens.colorNeutralForegroundStaticInverted,
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  fechar: {
+    minWidth: '48px',
+    minHeight: '48px',
+    padding: 0,
+    color: tokens.colorNeutralForegroundStaticInverted,
+    ':hover': {
+      color: tokens.colorNeutralForegroundStaticInverted,
+      backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    },
+    ':hover:active': {
+      color: tokens.colorNeutralForegroundStaticInverted,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    },
+  },
+  area: {
+    flexGrow: 1,
+    display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalM,
-    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    minHeight: 0,
   },
-  video: {
+  videoWrap: {
+    position: 'relative',
     width: '100%',
     maxWidth: '720px',
-    maxHeight: '68vh',
+  },
+  video: {
+    display: 'block',
+    width: '100%',
+    maxHeight: '70vh',
     objectFit: 'contain',
     borderRadius: tokens.borderRadiusLarge,
-    backgroundColor: '#000000',
+    backgroundColor: tokens.colorNeutralBackgroundStatic,
   },
-  acoes: {
-    display: 'flex',
-    gap: tokens.spacingHorizontalM,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+  guia: {
+    position: 'absolute',
+    inset: '6%',
+    borderRadius: tokens.borderRadiusLarge,
+    border: `2px dashed ${tokens.colorNeutralForegroundStaticInverted}`,
+    opacity: 0.45,
+    pointerEvents: 'none',
   },
   erro: {
     maxWidth: '520px',
   },
+  rodape: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: tokens.spacingVerticalM,
+  },
   dica: {
-    color: '#ffffff',
+    color: tokens.colorNeutralForegroundStaticInverted,
+    textAlign: 'center',
+    maxWidth: '48ch',
+    opacity: 0.85,
+  },
+  acoes: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: tokens.spacingHorizontalL,
+    flexWrap: 'wrap',
+  },
+  disparo: {
+    width: '76px',
+    height: '76px',
+    minWidth: '76px',
+    minHeight: '76px',
+    padding: 0,
+    borderRadius: '50%',
+    boxShadow: `0 0 0 4px rgba(255, 255, 255, 0.35)`,
+  },
+  secundario: {
+    color: tokens.colorNeutralForegroundStaticInverted,
+    ':hover': {
+      color: tokens.colorNeutralForegroundStaticInverted,
+      backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    },
+    ':hover:active': {
+      color: tokens.colorNeutralForegroundStaticInverted,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    },
   },
 });
 
@@ -148,47 +226,80 @@ export function CameraApp({
   }
 
   return (
-    <div className={c.fundo} role="dialog" aria-label="Câmera">
+    <div className={c.fundo} role="dialog" aria-modal="true" aria-label="Câmera">
+      <div className={c.topo}>
+        <Text className={c.titulo} size={400}>
+          Câmera
+        </Text>
+        <Botao
+          variante="sutil"
+          className={c.fechar}
+          icon={<Dismiss24Regular />}
+          onClick={aoFechar}
+          aria-label="Fechar câmera"
+        />
+      </div>
+
       {erro ? (
-        <div className={c.erro}>
-          <Aviso tom="erro" titulo="Câmera indisponível">
-            {erro}
-          </Aviso>
+        <div className={c.area}>
+          <div className={c.erro}>
+            <Aviso tom="erro" titulo="Câmera indisponível">
+              {erro}
+            </Aviso>
+          </div>
         </div>
       ) : (
-        <>
-          <video
-            ref={videoRef}
-            className={c.video}
-            playsInline
-            muted
-            autoPlay
-            aria-label="Pré-visualização da câmera"
-          />
+        <div className={c.area}>
+          <div className={c.videoWrap}>
+            <video
+              ref={videoRef}
+              className={c.video}
+              playsInline
+              muted
+              autoPlay
+              aria-label="Pré-visualização da câmera"
+            />
+            <div className={c.guia} aria-hidden />
+          </div>
+        </div>
+      )}
+
+      <div className={c.rodape}>
+        {!erro && (
           <Text className={c.dica} size={200}>
             Não fotografe pessoas — enquadre apenas o ambiente da seção.
           </Text>
-        </>
-      )}
-
-      <div className={c.acoes}>
-        {!erro && (
-          <Botao
-            variante="primario"
-            icon={<Camera24Regular />}
-            carregando={capturando}
-            disabled={!pronta}
-            onClick={capturar}
-          >
-            Capturar
-          </Botao>
         )}
-        <Botao variante="sutil" icon={<FolderOpen24Regular />} onClick={aoUsarArquivo}>
-          Usar da galeria
-        </Botao>
-        <Botao variante="sutil" icon={<Dismiss24Regular />} onClick={aoFechar}>
-          Cancelar
-        </Botao>
+
+        <div className={c.acoes}>
+          {!erro && (
+            <Botao
+              variante="primario"
+              className={c.disparo}
+              icon={<Camera24Regular />}
+              carregando={capturando}
+              disabled={!pronta}
+              onClick={capturar}
+              aria-label="Capturar foto"
+            />
+          )}
+          <Botao
+            variante="sutil"
+            className={c.secundario}
+            icon={<FolderOpen24Regular />}
+            onClick={aoUsarArquivo}
+          >
+            Usar da galeria
+          </Botao>
+          <Botao
+            variante="sutil"
+            className={c.secundario}
+            icon={<Dismiss24Regular />}
+            onClick={aoFechar}
+          >
+            Cancelar
+          </Botao>
+        </div>
       </div>
     </div>
   );

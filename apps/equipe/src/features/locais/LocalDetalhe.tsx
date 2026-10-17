@@ -1,12 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ROTULO_STATUS_ETAPA, type Etapa } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
-import { ArrowLeft24Regular, Warning24Regular } from '@fluentui/react-icons';
+import { Warning24Regular } from '@fluentui/react-icons';
 import {
   BarraProgresso,
   CabecalhoApp,
   Cartao,
+  ConteudoPagina,
+  EsqueletoLista,
   EstadoVazio,
   Medalhao,
   Selo,
@@ -17,15 +19,34 @@ import { db } from '@/db/schema';
 import { tomStatusEtapa } from '@/lib/status-ui';
 
 const useClasses = makeStyles({
-  pagina: {
+  endereco: {
+    color: tokens.colorNeutralForeground3,
+  },
+  contadores: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: tokens.spacingHorizontalS,
+  },
+  contador: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '2px',
+    textAlign: 'center',
     padding: tokens.spacingVerticalM,
-    [`@media ${pontoTablet}`]: {
-      padding: tokens.spacingVerticalL,
-      gap: tokens.spacingVerticalL,
-    },
+  },
+  numero: {
+    fontSize: '28px',
+    lineHeight: '32px',
+    fontWeight: tokens.fontWeightBold,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  numeroOk: {
+    color: tokens.colorPaletteGreenForeground1,
+  },
+  numeroErro: {
+    color: tokens.colorPaletteRedForeground1,
   },
   agenda: {
     display: 'flex',
@@ -79,7 +100,6 @@ export function LocalDetalhe() {
   const secoes = useLiveQuery(
     () => db.secoes.where('local_id').equals(localId).toArray(),
     [localId],
-    [],
   );
   const itens = useLiveQuery(() => db.itens.toArray(), [], []);
   const cronograma = useLiveQuery(
@@ -87,6 +107,9 @@ export function LocalDetalhe() {
     [localId],
     [],
   );
+
+  const carregando = local === undefined || secoes === undefined;
+  const listaSecoes = secoes ?? [];
 
   function progresso(secaoId: string, etapa: Etapa) {
     const daEtapa = itens.filter((i) => i.secao_id === secaoId && i.etapa === etapa);
@@ -96,6 +119,11 @@ export function LocalDetalhe() {
     };
   }
 
+  const aprovadas = listaSecoes.filter(
+    (s) => s.status_etapa1 === 'aprovada' && s.status_etapa2 === 'aprovada',
+  ).length;
+  const naoConformes = listaSecoes.filter((s) => !s.conforme).length;
+
   const dias = [...cronograma].sort((a, b) => a.data.localeCompare(b.data));
 
   return (
@@ -103,15 +131,38 @@ export function LocalDetalhe() {
       <CabecalhoApp
         titulo={local?.nome ?? 'Local'}
         subtitulo={local ? `Zona ${local.zona}` : undefined}
-        inicio={
-          <Link to="/locais" aria-label="Voltar" style={{ color: 'inherit' }}>
-            <ArrowLeft24Regular />
-          </Link>
-        }
+        aoVoltar={() => navigate('/locais')}
       />
 
-      <div className={c.pagina}>
-        {local?.endereco && <Text className={c.rotulo}>{local.endereco}</Text>}
+      <ConteudoPagina>
+        {local?.endereco && <Text className={c.endereco}>{local.endereco}</Text>}
+
+        {!carregando && listaSecoes.length > 0 && (
+          <div className={c.contadores}>
+            <Cartao className={c.contador}>
+              <Text className={c.numero}>{listaSecoes.length}</Text>
+              <Text size={200} className={c.rotulo}>
+                Seção(ões)
+              </Text>
+            </Cartao>
+            <Cartao className={c.contador}>
+              <Text className={`${c.numero} ${c.numeroOk}`}>{aprovadas}</Text>
+              <Text size={200} className={c.rotulo}>
+                Aprovada(s)
+              </Text>
+            </Cartao>
+            <Cartao className={c.contador}>
+              <Text
+                className={`${c.numero} ${naoConformes > 0 ? c.numeroErro : ''}`}
+              >
+                {naoConformes}
+              </Text>
+              <Text size={200} className={c.rotulo}>
+                Não conforme(s)
+              </Text>
+            </Cartao>
+          </div>
+        )}
 
         {dias.length > 0 && (
           <div className={c.agenda}>
@@ -121,21 +172,26 @@ export function LocalDetalhe() {
             {dias.map((d) => (
               <Selo
                 key={d.id}
-                texto={`Etapa ${d.etapa} · ${new Date(`${d.data}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`}
+                texto={`Etapa ${d.etapa} · ${new Date(`${d.data}T00:00:00`).toLocaleDateString(
+                  'pt-BR',
+                  { day: '2-digit', month: '2-digit' },
+                )}`}
                 tom="neutro"
               />
             ))}
           </div>
         )}
 
-        {secoes.length === 0 ? (
+        {carregando ? (
+          <EsqueletoLista itens={4} />
+        ) : listaSecoes.length === 0 ? (
           <EstadoVazio
             titulo="Nenhuma seção neste local"
             descricao="As seções deste local ainda não foram baixadas. Use 'Baixar dados do dia' em Ajustes."
           />
         ) : (
           <div className={c.lista}>
-            {secoes
+            {listaSecoes
               .slice()
               .sort((a, b) => a.numero - b.numero)
               .map((s) => {
@@ -153,7 +209,7 @@ export function LocalDetalhe() {
                       <Medalhao tom={concluida ? 'ok' : 'marca'}>{s.numero}</Medalhao>
                     }
                     titulo={`Seção ${s.numero}`}
-                    descricao={local?.nome}
+                    descricao={concluida ? 'Montagem aprovada' : 'Toque para abrir as etapas'}
                   >
                     <div className={c.conteudo}>
                       {!s.conforme && (
@@ -173,6 +229,16 @@ export function LocalDetalhe() {
                           texto={ROTULO_STATUS_ETAPA[s.status_etapa1]}
                           tom={tomStatusEtapa(s.status_etapa1)}
                         />
+                      </div>
+                      {e1.total > 0 && (
+                        <BarraProgresso
+                          concluidos={e1.concluidos}
+                          total={e1.total}
+                          rotulo={`Etapa 1 · ${e1.concluidos} de ${e1.total} itens`}
+                        />
+                      )}
+
+                      <div className={c.linha}>
                         <Text size={200} className={c.rotulo}>
                           Etapa 2
                         </Text>
@@ -181,14 +247,6 @@ export function LocalDetalhe() {
                           tom={tomStatusEtapa(s.status_etapa2)}
                         />
                       </div>
-
-                      {e1.total > 0 && (
-                        <BarraProgresso
-                          concluidos={e1.concluidos}
-                          total={e1.total}
-                          rotulo={`Etapa 1 · ${e1.concluidos} de ${e1.total} itens`}
-                        />
-                      )}
                       {e2.total > 0 && (
                         <BarraProgresso
                           concluidos={e2.concluidos}
@@ -202,7 +260,7 @@ export function LocalDetalhe() {
               })}
           </div>
         )}
-      </div>
+      </ConteudoPagina>
     </>
   );
 }

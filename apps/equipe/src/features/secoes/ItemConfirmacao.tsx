@@ -8,9 +8,15 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { Checkmark24Regular, Dismiss24Regular } from '@fluentui/react-icons';
+import {
+  Checkmark24Regular,
+  CheckmarkCircle24Regular,
+  Dismiss24Regular,
+  DismissCircle24Regular,
+  ShieldCheckmark24Regular,
+} from '@fluentui/react-icons';
 import { ROTULO_MOTIVO, perguntaDeSigilo, type MotivoDesvio } from '@montaje/core';
-import { Botao, Cartao, Selo } from '@montaje/ui';
+import { Botao, Cartao, Medalhao, Selo } from '@montaje/ui';
 import { db, type ItemLocal } from '@/db/schema';
 import {
   marcarEmMontagem,
@@ -19,6 +25,7 @@ import {
   responderItem,
   salvarDesvio,
 } from '@/db/repo';
+import { useAvisos } from '@/lib/avisos';
 
 const MOTIVOS: MotivoDesvio[] = [
   'espaco_insuficiente',
@@ -32,6 +39,11 @@ const useClasses = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
+  },
+  escolha: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: tokens.spacingHorizontalS,
   },
   acoes: {
     display: 'flex',
@@ -70,12 +82,16 @@ export function ItemConfirmacao({
   item,
   secaoId,
   somenteLeitura = false,
+  precisaCorrecao = false,
 }: {
   item: ItemLocal;
   secaoId: string;
   somenteLeitura?: boolean;
+  /** O cartório devolveu justamente este item para correção. */
+  precisaCorrecao?: boolean;
 }) {
   const c = useClasses();
+  const avisos = useAvisos();
   const [salvando, setSalvando] = useState(false);
   const [mostrarObservacao, setMostrarObservacao] = useState(Boolean(item.observacao));
   const [texto, setTexto] = useState(item.observacao ?? '');
@@ -103,6 +119,8 @@ export function ItemConfirmacao({
       if (valor === true) await removerDesvio(item.id);
       // APP-21: resposta de sigilo recalcula a conformidade da secao (regra 1).
       if (sigilo) await recalcularConformidadeDaSecao(secaoId);
+    } catch {
+      avisos.erro('Não foi possível salvar a resposta', item.nome);
     } finally {
       setSalvando(false);
     }
@@ -129,6 +147,9 @@ export function ItemConfirmacao({
     try {
       await salvarDesvio(item.id, motivo, obsDesvio.trim() || null);
       setFormDesvioAberto(false);
+      avisos.sucesso('Desvio registrado', item.nome);
+    } catch {
+      avisos.erro('Não foi possível registrar o desvio', item.nome);
     } finally {
       setSalvandoDesvio(false);
     }
@@ -137,23 +158,44 @@ export function ItemConfirmacao({
   async function apagarDesvio() {
     await removerDesvio(item.id);
     setFormDesvioAberto(false);
+    avisos.info('Desvio removido', item.nome);
   }
+
+  const tomMedalhao = resposta === false ? 'erro' : resposta === true ? 'ok' : 'marca';
 
   return (
     <Cartao
+      inicio={
+        <Medalhao tom={precisaCorrecao ? 'erro' : sigilo ? 'marca' : tomMedalhao}>
+          {sigilo ? (
+            <ShieldCheckmark24Regular />
+          ) : resposta === false ? (
+            <DismissCircle24Regular />
+          ) : (
+            <CheckmarkCircle24Regular />
+          )}
+        </Medalhao>
+      }
       titulo={item.nome}
       acao={
         <div className={c.selos}>
           {sigilo && <Selo texto="Sigilo" tom="marca" />}
+          {precisaCorrecao && <Selo texto="Corrigir" tom="erro" />}
           <Selo
-            texto={resposta === true ? 'Sim' : resposta === false ? 'Nao' : 'Pendente'}
+            texto={resposta === true ? 'Sim' : resposta === false ? 'Não' : 'Pendente'}
             tom={resposta === true ? 'ok' : resposta === false ? 'erro' : 'neutro'}
           />
         </div>
       }
     >
       <div className={c.corpo}>
-        <div className={c.acoes}>
+        {precisaCorrecao && (
+          <Text size={200} weight="semibold" className={c.naoConforme}>
+            Item devolvido pelo cartório — revise a resposta.
+          </Text>
+        )}
+
+        <div className={c.escolha}>
           <Botao
             variante={resposta === true ? 'primario' : 'secundario'}
             icon={<Checkmark24Regular />}
@@ -170,20 +212,9 @@ export function ItemConfirmacao({
             carregando={salvando}
             disabled={somenteLeitura}
             onClick={() => salvar(false)}
-            aria-label="Responder nao"
+            aria-label="Responder não"
           >
-            Nao
-          </Botao>
-          <Botao
-            variante="sutil"
-            disabled={salvando || somenteLeitura}
-            onClick={() => setMostrarObservacao((v) => !v)}
-          >
-            {mostrarObservacao
-              ? 'Ocultar observacao'
-              : item.observacao
-                ? 'Editar observacao'
-                : 'Observacao'}
+            Não
           </Botao>
         </div>
 
@@ -191,16 +222,30 @@ export function ItemConfirmacao({
           <Text size={200} className={c.naoConforme}>
             {sigilo
               ? 'Pergunta eliminatória do sigilo do voto: a seção ficou NÃO CONFORME. Registre o desvio abaixo.'
-              : 'Item marcado como nao conforme.'}
+              : 'Item marcado como não conforme.'}
           </Text>
         )}
+
+        <div className={c.acoes}>
+          <Botao
+            variante="sutil"
+            disabled={salvando || somenteLeitura}
+            onClick={() => setMostrarObservacao((v) => !v)}
+          >
+            {mostrarObservacao
+              ? 'Ocultar observação'
+              : item.observacao
+                ? 'Editar observação'
+                : 'Observação'}
+          </Botao>
+        </div>
 
         {mostrarObservacao && (
           <div className={c.observacao}>
             <Textarea
               value={texto}
               onChange={(_, dados) => setTexto(dados.value)}
-              placeholder="Observacao (opcional)"
+              placeholder="Observação (opcional)"
               resize="vertical"
               rows={2}
               readOnly={somenteLeitura}
@@ -212,7 +257,7 @@ export function ItemConfirmacao({
                 disabled={somenteLeitura}
                 onClick={() => salvar(resposta)}
               >
-                Salvar observacao
+                Salvar observação
               </Botao>
             </div>
           </div>
@@ -221,7 +266,7 @@ export function ItemConfirmacao({
         {resposta === false && (desvio || !somenteLeitura) && (
           <div className={c.desvio}>
             <Text size={200} weight="semibold">
-              Desvio (RF-E20/E21)
+              Desvio
             </Text>
 
             {formDesvioAberto ? (
@@ -250,8 +295,8 @@ export function ItemConfirmacao({
                   onChange={(_, dados) => setObsDesvio(dados.value)}
                   placeholder={
                     motivo === 'outro'
-                      ? 'Descreva o desvio (obrigatorio)'
-                      : 'Observacao (opcional)'
+                      ? 'Descreva o desvio (obrigatório)'
+                      : 'Observação (opcional)'
                   }
                   resize="vertical"
                   rows={2}

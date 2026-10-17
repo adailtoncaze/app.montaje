@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#5b5fc7" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#4f46e5" />
     <link rel="icon" type="image/svg+xml" href="/icone.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -11,6 +12,39 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>MontaJE — Montagem de Seções</title>
+    <style>
+      /* Evita o "flash" de fundo claro antes do tema do Fluent carregar. */
+      html {
+        color-scheme: light dark;
+      }
+      html[data-tema='claro'] {
+        color-scheme: light;
+        background-color: #ffffff;
+      }
+      html[data-tema='escuro'] {
+        color-scheme: dark;
+        background-color: #100e25;
+      }
+    </style>
+    <script>
+      // Aplica o tema escolhido antes do primeiro paint (espelha ProvedorMontaje).
+      (function () {
+        try {
+          var preferencia = localStorage.getItem('montaje.equipe.tema');
+          var tema = preferencia === 'claro' || preferencia === 'escuro' ? preferencia : 'sistema';
+          var escuro =
+            tema === 'escuro' ||
+            (tema === 'sistema' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.tema = escuro ? 'escuro' : 'claro';
+          document.documentElement.style.colorScheme = escuro ? 'dark' : 'light';
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', escuro ? '#100e25' : '#4f46e5');
+        } catch (e) {
+          /* sem armazenamento disponível — segue o padrão do sistema */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -37,6 +37,7 @@ const useClasses = makeStyles({
     borderRadius: tokens.borderRadiusXLarge,
     border: `1px solid ${tokens.colorBrandStroke2}`,
     backgroundColor: tokens.colorBrandBackground2,
+    boxShadow: tokens.shadow2,
   },
   esquerda: {
     display: 'flex',
@@ -45,18 +46,25 @@ const useClasses = makeStyles({
     minWidth: 0,
     color: tokens.colorBrandForeground2,
   },
+  icone: {
+    display: 'flex',
+    flexShrink: 0,
+    fontSize: '24px',
+    lineHeight: '24px',
+  },
   texto: {
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
   },
   dica: {
-    color: tokens.colorNeutralForeground3,
+    color: tokens.colorNeutralForeground2,
   },
   acoes: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
+    flexWrap: 'wrap',
   },
 });
 
@@ -86,7 +94,9 @@ export function FaixaInstalar() {
   return (
     <div className={c.faixa}>
       <div className={c.esquerda}>
-        <PhoneDesktop24Regular />
+        <span className={c.icone}>
+          <PhoneDesktop24Regular />
+        </span>
         <div className={c.texto}>
           <Text weight="semibold">Instale o app neste aparelho</Text>
           <Text size={200} className={c.dica}>

@@ -13,6 +13,8 @@ export interface BotaoProps {
   onClick?: MouseEventHandler<HTMLButtonElement>;
   title?: string;
   className?: string;
+  /** Ocupa toda a largura disponível (útil em formulários mobile). */
+  larguraTotal?: boolean;
   icon?: ReactElement;
   children?: ReactNode;
   'aria-label'?: string;
@@ -23,21 +25,43 @@ const useClasses = makeStyles({
     minHeight: '48px',
     borderRadius: tokens.borderRadiusLarge,
     fontWeight: tokens.fontWeightSemibold,
+    letterSpacing: '0.01em',
     paddingTop: tokens.spacingVerticalS,
     paddingBottom: tokens.spacingVerticalS,
     paddingLeft: tokens.spacingHorizontalL,
     paddingRight: tokens.spacingHorizontalL,
+    transitionProperty: 'background-color, box-shadow, border-color, color, transform',
+    transitionDuration: tokens.durationNormal,
+    transitionTimingFunction: tokens.curveEasyEase,
+    ':focus-visible': {
+      outlineWidth: '2px',
+      outlineStyle: 'solid',
+      outlineColor: tokens.colorStrokeFocus2,
+      outlineOffset: '2px',
+    },
+  },
+  larguraTotal: {
+    width: '100%',
+    justifyContent: 'center',
+  },
+  primario: {
+    boxShadow: tokens.shadow4,
+    ':hover': { boxShadow: tokens.shadow8 },
+    ':hover:active': { boxShadow: tokens.shadow2 },
   },
   perigo: {
     backgroundColor: tokens.colorPaletteRedBackground3,
     color: tokens.colorNeutralForegroundOnBrand,
+    boxShadow: tokens.shadow4,
     ':hover': {
       backgroundColor: tokens.colorPaletteRedForeground1,
       color: tokens.colorNeutralForegroundOnBrand,
+      boxShadow: tokens.shadow8,
     },
     ':hover:active': {
       backgroundColor: tokens.colorPaletteRedForeground1,
       color: tokens.colorNeutralForegroundOnBrand,
+      boxShadow: tokens.shadow2,
     },
   },
 });
@@ -49,7 +73,7 @@ const APARENCIA: Record<VarianteBotao, Aparencia> = {
   perigo: 'primary',
 };
 
-/** Botão do design system (Fluent 2 / Teams) com estados de carregamento. */
+/** Botão do design system (Fluent 2) com estados de carregamento. */
 export function Botao({
   variante = 'primario',
   carregando = false,
@@ -58,6 +82,7 @@ export function Botao({
   onClick,
   title,
   className,
+  larguraTotal = false,
   icon,
   children,
   'aria-label': ariaLabel,
@@ -67,7 +92,13 @@ export function Botao({
     <Button
       type={type}
       appearance={APARENCIA[variante]}
-      className={mergeClasses(c.base, variante === 'perigo' && c.perigo, className)}
+      className={mergeClasses(
+        c.base,
+        variante === 'primario' && c.primario,
+        variante === 'perigo' && c.perigo,
+        larguraTotal && c.larguraTotal,
+        className,
+      )}
       disabled={disabled || carregando}
       onClick={onClick}
       title={title}

@@ -72,6 +72,22 @@ export function tomSituacao(situacao: SituacaoSecao): Tom {
   }
 }
 
+/** Classe de cor sólida (fundo) usada no acento superior dos cartões de local/seção. */
+export function classeAcento(tom: Tom): string {
+  switch (tom) {
+    case 'brand':
+      return 'bg-brand-solid';
+    case 'success':
+      return 'bg-success-solid';
+    case 'warning':
+      return 'bg-warning-solid';
+    case 'danger':
+      return 'bg-danger-solid';
+    default:
+      return 'bg-neutral-solid';
+  }
+}
+
 export function prioridadeSituacao(situacao: SituacaoSecao): number {
   switch (situacao) {
     case 'aguardando':

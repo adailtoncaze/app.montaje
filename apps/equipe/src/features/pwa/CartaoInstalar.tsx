@@ -7,6 +7,7 @@ import {
   ShareIos24Regular,
 } from '@fluentui/react-icons';
 import { Aviso, Botao, Cartao, Medalhao, Selo } from '@montaje/ui';
+import { useAvisos } from '@/lib/avisos';
 import { useInstalarPWA } from './useInstalarPWA';
 
 const useClasses = makeStyles({
@@ -23,12 +24,14 @@ const useClasses = makeStyles({
     display: 'inline-flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalXS,
+    whiteSpace: 'nowrap',
   },
 });
 
 /** Cartão de instalação da PWA, usado em Ajustes. Cobre desktop, Android e iOS. */
 export function CartaoInstalar() {
   const c = useClasses();
+  const avisos = useAvisos();
   const { instalado, podeInstalar, precisaCompartilhar, plataforma, instalar } =
     useInstalarPWA();
   const [ocupado, setOcupado] = useState(false);
@@ -39,7 +42,13 @@ export function CartaoInstalar() {
     setRecusou(false);
     try {
       const r = await instalar();
-      if (r === 'recusado') setRecusou(true);
+      if (r === 'recusado') {
+        setRecusou(true);
+      } else if (r === 'aceito') {
+        avisos.sucesso('Instalando…', 'O app abrirá em tela cheia na sequência.');
+      } else {
+        avisos.alerta('Instalação indisponível', 'Use o menu do navegador para instalar.');
+      }
     } finally {
       setOcupado(false);
     }
@@ -58,16 +67,10 @@ export function CartaoInstalar() {
     >
       <div className={c.conteudo}>
         {instalado ? (
-          <Text size={200}>
-            Este aparelho já está usando o MontaJE instalado.
-          </Text>
+          <Text size={200}>Este aparelho já está usando o MontaJE instalado.</Text>
         ) : podeInstalar ? (
           <>
-            <Botao
-              onClick={aoInstalar}
-              carregando={ocupado}
-              icon={<ArrowDownload24Regular />}
-            >
+            <Botao onClick={aoInstalar} carregando={ocupado} icon={<ArrowDownload24Regular />}>
               Instalar o app
             </Botao>
             {recusou && (

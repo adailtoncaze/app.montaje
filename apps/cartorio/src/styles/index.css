@@ -1,99 +1,170 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Dark mode por classe no <html> (alternado pela interface). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
- * Tema do painel do cartório.
+ * Sistema de design do painel do cartório — "institucional moderno".
  *
- * Os utilitários do shadcn/ui (bg-background, text-foreground, border-border,
- * bg-primary, ...) são mapeados para os tokens oficiais do Microsoft Teams
- * (Fluent 2). Os valores são exatamente os de `teamsLightTheme`, seguindo a
- * estrutura recomendada em:
- * https://learn.microsoft.com/pt-br/microsoftteams/platform/concepts/design/design-teams-app-color
- *   - Marca: colorBrand*
- *   - Neutros/superfícies: colorNeutral*
- *   - Estados: colorStatus{Success,Danger,Warning}{Background1,Foreground1,Border1}
- *     (suaves) e Background3 (sólidos)
+ * Utilitários do shadcn/ui (bg-background, text-foreground, border-border,
+ * bg-primary, ...) mapeados para tokens próprios, com paleta neutra fria
+ * (slate), marca índigo e estados semânticos suaves. Suporta tema claro e
+ * escuro (`.dark`). A escala de raios, sombras e tipografia é única para todo
+ * o painel, garantindo consistência entre as telas.
  */
 
 @source '../../index.html';
 @source '../';
 
 :root {
-  --radius: 0.5rem; /* 8px — Fluent borderRadiusXLarge */
+  --radius: 0.625rem; /* 10px — base da escala de cantos */
 
   /* Superfícies */
-  --background: #f5f5f5; /* colorNeutralBackground3 */
-  --foreground: #242424; /* colorNeutralForeground1 */
-  --card: #ffffff; /* colorNeutralBackground1 */
-  --card-foreground: #242424;
+  --background: #f6f7f9;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #242424;
+  --popover-foreground: #0f172a;
 
-  /* Marca (roxo do Teams) */
-  --primary: #5b5fc7; /* colorBrandBackground */
-  --primary-foreground: #ffffff; /* colorNeutralForegroundOnBrand */
-  --primary-hover: #4f52b2; /* colorBrandBackgroundHover */
-  --primary-pressed: #383966; /* colorBrandBackgroundPressed */
-  --primary-subtle: #e8ebfa; /* colorBrandBackground2 */
-  --primary-subtle-foreground: #4f52b2; /* colorBrandForeground2 */
+  /* Marca (índigo) */
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --primary-hover: #4338ca;
+  --primary-pressed: #3730a3;
+  --primary-subtle: #eef2ff;
+  --primary-subtle-foreground: #4338ca;
 
   /* Secundário / neutros */
-  --secondary: #ffffff;
-  --secondary-foreground: #242424;
-  --muted: #f5f5f5; /* colorNeutralBackground3 */
-  --muted-foreground: #616161; /* colorNeutralForeground3 */
-  --accent: #f5f5f5; /* colorSubtleBackgroundHover */
-  --accent-foreground: #242424;
-  --accent-pressed: #e0e0e0; /* colorSubtleBackgroundPressed */
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --accent-pressed: #e2e8f0;
 
   /* Perigo (ações destrutivas) */
-  --destructive: #c50f1f; /* colorStatusDangerBackground3 */
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --destructive-hover: #b10e1c; /* colorStatusDangerBackground3Hover */
+  --destructive-hover: #b91c1c;
 
   /* Contornos e foco */
-  --border: #e0e0e0; /* colorNeutralStroke2 */
-  --input: #d1d1d1; /* colorNeutralStroke1 */
-  --ring: #5b5fc7;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #6366f1;
 
-  /* Estados — suaves (avisos/mensagens): tokens colorStatus* do Teams
-     (fundo = Background1, texto = Foreground1, borda = Border1) */
-  --info: #4f52b2; /* colorBrandForeground2 */
-  --info-bg: #e8ebfa; /* colorBrandBackground2 */
-  --info-border: #c7cbf0; /* colorBrandBackground2Pressed */
-  --success: #0e700e; /* colorStatusSuccessForeground1 */
-  --success-bg: #f1faf1; /* colorStatusSuccessBackground1 */
-  --success-border: #9fd89f; /* colorStatusSuccessBorder1 */
-  --warning: #bc4b09; /* colorStatusWarningForeground1 */
-  --warning-bg: #fff9f5; /* colorStatusWarningBackground1 */
-  --warning-border: #fdcfb4; /* colorStatusWarningBorder1 */
-  --danger: #b10e1c; /* colorStatusDangerForeground1 */
-  --danger-bg: #fdf3f4; /* colorStatusDangerBackground1 */
-  --danger-border: #eeacb2; /* colorStatusDangerBorder1 */
+  /* Estados — suaves (avisos/mensagens) */
+  --info: #4338ca;
+  --info-bg: #eef2ff;
+  --info-border: #c7d2fe;
+  --success: #15803d;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --warning: #b45309;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
 
-  /* Estados — solidos (selos): Background3 + branco (colorNeutralForegroundOnBrand) */
-  --brand-solid: #5b5fc7; /* colorBrandBackground */
+  /* Estados — sólidos (selos/badges) */
+  --brand-solid: #4f46e5;
   --brand-solid-foreground: #ffffff;
-  --success-solid: #107c10; /* colorStatusSuccessBackground3 */
+  --success-solid: #16a34a;
   --success-solid-foreground: #ffffff;
-  --warning-solid: #f7630c; /* colorStatusWarningBackground3 */
-  --warning-solid-foreground: #242424; /* colorNeutralForeground1 (contraste) */
-  --danger-solid: #c50f1f; /* colorStatusDangerBackground3 */
+  --warning-solid: #f59e0b;
+  --warning-solid-foreground: #422006;
+  --danger-solid: #dc2626;
   --danger-solid-foreground: #ffffff;
-  --neutral-solid: #ebebeb; /* colorNeutralBackground5 */
-  --neutral-solid-foreground: #424242; /* colorNeutralForeground2 */
+  --neutral-solid: #e2e8f0;
+  --neutral-solid-foreground: #334155;
 
-  /* Gráficos (tokens de status/marca do Teams) */
-  --chart-1: #5b5fc7; /* colorBrandBackground */
-  --chart-2: #107c10; /* colorStatusSuccessBackground3 */
-  --chart-3: #c50f1f; /* colorStatusDangerBackground3 */
-  --chart-4: #f7630c; /* colorStatusWarningBackground3 */
-  --chart-5: #038387; /* colorPaletteTealBorderActive */
+  /* Gráficos */
+  --chart-1: #4f46e5;
+  --chart-2: #16a34a;
+  --chart-3: #f59e0b;
+  --chart-4: #e11d48;
+  --chart-5: #0891b2;
+
+  /* Elementos de interface */
+  --skeleton: #e2e8f0;
+  --overlay: rgba(15, 23, 42, 0.45);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+}
+
+.dark {
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --card: #0f1728;
+  --card-foreground: #e2e8f0;
+  --popover: #0f1728;
+  --popover-foreground: #e2e8f0;
+
+  --primary: #818cf8;
+  --primary-foreground: #0b1220;
+  --primary-hover: #a5b4fc;
+  --primary-pressed: #6366f1;
+  --primary-subtle: #1e1b4b;
+  --primary-subtle-foreground: #c7d2fe;
+
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #e2e8f0;
+  --accent-pressed: #334155;
+
+  --destructive: #f87171;
+  --destructive-foreground: #0b1220;
+  --destructive-hover: #ef4444;
+
+  --border: #1f2a44;
+  --input: #334155;
+  --ring: #818cf8;
+
+  --info: #a5b4fc;
+  --info-bg: #1e1b4b;
+  --info-border: #3730a3;
+  --success: #4ade80;
+  --success-bg: #052e16;
+  --success-border: #166534;
+  --warning: #fbbf24;
+  --warning-bg: #2a1a04;
+  --warning-border: #92400e;
+  --danger: #f87171;
+  --danger-bg: #2a0d0d;
+  --danger-border: #991b1b;
+
+  --brand-solid: #6366f1;
+  --brand-solid-foreground: #ffffff;
+  --success-solid: #22c55e;
+  --success-solid-foreground: #052e16;
+  --warning-solid: #fbbf24;
+  --warning-solid-foreground: #2a1a04;
+  --danger-solid: #ef4444;
+  --danger-solid-foreground: #ffffff;
+  --neutral-solid: #334155;
+  --neutral-solid-foreground: #e2e8f0;
+
+  --chart-1: #818cf8;
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #fb7185;
+  --chart-5: #22d3ee;
+
+  --skeleton: #1e293b;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --sidebar: #0f1728;
+  --sidebar-foreground: #e2e8f0;
 }
 
 @theme inline {
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Apple Color Emoji',
-    'Segoe UI Emoji', sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+    'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -155,16 +226,22 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  /* Sombras do Teams (colorNeutralShadowAmbient/Key) */
-  --shadow-teams-2: 0 0 2px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.14);
-  --shadow-teams-4: 0 0 2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.14);
-  --shadow-teams-8: 0 0 2px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.14);
-  --shadow-teams-16: 0 0 2px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.14);
+  --color-skeleton: var(--skeleton);
+  --color-overlay: var(--overlay);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
 
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
+  /* Sombras suaves em camadas (mantém os nomes legados dos componentes) */
+  --shadow-teams-2: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-teams-4: 0 2px 4px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-teams-8: 0 4px 8px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.1);
+  --shadow-teams-16: 0 8px 16px rgba(15, 23, 42, 0.08), 0 16px 40px rgba(15, 23, 42, 0.12);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
 }
 
 @layer base {
@@ -183,9 +260,17 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.015em;
   }
 
   /* Foco visível único (contorno de 2px na cor de marca). */

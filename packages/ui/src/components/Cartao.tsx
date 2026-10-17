@@ -18,13 +18,21 @@ const useClasses = makeStyles({
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground1,
     boxShadow: tokens.shadow2,
-    transitionProperty: 'box-shadow, background-color, transform',
-    transitionDuration: '120ms',
+    transitionProperty: 'box-shadow, background-color, border-color, transform',
+    transitionDuration: tokens.durationNormal,
+    transitionTimingFunction: tokens.curveEasyEase,
   },
   clicavel: {
     cursor: 'pointer',
-    ':hover': { boxShadow: tokens.shadow8 },
-    ':hover:active': { backgroundColor: tokens.colorSubtleBackgroundHover },
+    ':hover': {
+      boxShadow: tokens.shadow8,
+      transform: 'translateY(-1px)',
+    },
+    ':hover:active': {
+      backgroundColor: tokens.colorSubtleBackgroundHover,
+      boxShadow: tokens.shadow2,
+      transform: 'translateY(0)',
+    },
     ':focus-visible': {
       outlineWidth: '2px',
       outlineStyle: 'solid',
@@ -79,7 +87,7 @@ export interface CartaoProps {
   onClick?: () => void;
 }
 
-/** Cartão de conteúdo no estilo do Teams (superfície branca, cantos arredondados). */
+/** Cartão de conteúdo (superfície elevada, cantos modernos). */
 export function Cartao({
   inicio,
   titulo,

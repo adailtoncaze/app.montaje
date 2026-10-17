@@ -3,8 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#5b5fc7" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <title>MontaJE — Painel do Cartório</title>
+    <script>
+      // Define o tema antes do primeiro paint (espelha src/lib/tema.ts).
+      (function () {
+        try {
+          var bruto = localStorage.getItem('montaje.cartorio.tema');
+          var tema = bruto ? (JSON.parse(bruto).state || {}).tema : 'sistema';
+          var escuro =
+            tema === 'escuro' ||
+            (tema !== 'claro' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', escuro);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', escuro ? '#0b1220' : '#4f46e5');
+        } catch (e) {
+          /* sem armazenamento disponível — segue o padrão do sistema */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

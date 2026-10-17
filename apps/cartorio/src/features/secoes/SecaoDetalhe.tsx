@@ -1,18 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
-  ArrowLeft,
   Check,
   CircleCheck,
   ImageOff,
   Maximize2,
   Minus,
+  RefreshCw,
   TriangleAlert,
   User as UserIcon,
   X,
 } from 'lucide-react';
-import { Alert, AlertDescription, AlertIcon } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertIcon, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,10 +38,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Medalhao } from '@/components/medalhao';
+import { PageHeader } from '@/components/page-header';
+import { Progresso } from '@/components/progress-bar';
 import {
   ROTULO_MOTIVO,
   ROTULO_STATUS_ETAPA,
@@ -57,8 +65,12 @@ import {
   type SecaoDetalhe as DetalheSecao,
   type ValidacaoComAutor,
 } from '@/lib/dados';
+import { mensagemDeErro, useAvisoErro } from '@/lib/avisos';
 import { ROTULO_STATUS_ITEM, tomStatusEtapa, tomStatusItem } from '@/lib/status-ui';
 import { useSessao } from '@/features/auth/store';
+import { cn } from '@/lib/utils';
+
+const LIMITE_COMENTARIO = 600;
 
 /** Dados de uma foto preparados para o visualizador em tela cheia. */
 interface FotoAberta {
@@ -74,8 +86,26 @@ interface FotoAberta {
 /** Resposta Sim/Não (ou "não respondido") como selo compacto. */
 function ChipResposta({ resposta }: { resposta: boolean | null }) {
   if (resposta == null) return <Badge variant="secondary">Não respondido</Badge>;
+  return <Badge variant={resposta ? 'success' : 'danger'}>{resposta ? 'Sim' : 'Não'}</Badge>;
+}
+
+/** Mini indicador numérico do resumo da etapa. */
+function Indicador({
+  rotulo,
+  valor,
+  tone,
+}: {
+  rotulo: string;
+  valor: ReactNode;
+  tone?: string;
+}) {
   return (
-    <Badge variant={resposta ? 'success' : 'danger'}>{resposta ? 'Sim' : 'Não'}</Badge>
+    <div className="flex flex-col gap-0.5 rounded-lg border border-border bg-card px-3 py-2">
+      <dt className="text-xs text-muted-foreground">{rotulo}</dt>
+      <dd className={cn('text-lg font-semibold tabular-nums', tone ?? 'text-foreground')}>
+        {valor}
+      </dd>
+    </div>
   );
 }
 
@@ -102,14 +132,14 @@ function MiniaturaEvidencia({
     <button
       type="button"
       onClick={onAbrir}
-      className="group relative size-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group relative size-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted transition-shadow hover:shadow-teams-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       aria-label={`Ampliar ${alt}`}
     >
       <img
         src={url}
         alt={alt}
         loading="lazy"
-        className="size-full object-cover transition-transform group-hover:scale-105"
+        className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
       />
       <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
         <Maximize2 className="size-4" />
@@ -132,7 +162,12 @@ function ItemRevisao({
   urls: Record<string, string>;
   onAbrir: (foto: FotoAberta) => void;
 }) {
-  const evidencia = evidencias[0];
+  // Sempre a foto mais recente do item: quando o cartório devolve uma foto e a
+  // equipe envia a nova, esta substitui a anterior em desconformidade — mesmo
+  // que ainda existam registros antigos duplicados no servidor (dado legado).
+  const evidencia = [...evidencias].sort((a, b) =>
+    (b.capturada_em ?? b.created_at).localeCompare(a.capturada_em ?? a.created_at),
+  )[0];
   const caminho = evidencia?.caminho_miniatura ?? evidencia?.caminho_foto ?? null;
   const url = caminho ? urls[caminho] : undefined;
   const tom = tomStatusItem(item.status);
@@ -146,7 +181,7 @@ function ItemRevisao({
       : null;
 
   return (
-    <li className="flex items-start gap-4 p-4">
+    <li className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-accent/40">
       {item.tipo === 'foto' ? (
         <MiniaturaEvidencia
           url={url}
@@ -180,7 +215,7 @@ function ItemRevisao({
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <span className="flex min-w-0 items-baseline gap-2 text-sm font-semibold text-foreground">
             {item.tipo === 'foto' && item.foto_numero != null && (
-              <span className="text-muted-foreground">#{item.foto_numero}</span>
+              <span className="tabular-nums text-muted-foreground">#{item.foto_numero}</span>
             )}
             <span className="min-w-0 break-words">{item.nome}</span>
           </span>
@@ -259,19 +294,24 @@ function PainelValidacao({
     setSucesso(null);
 
     if (novoStatus === 'aprovada' && !conforme) {
-      setErro(
-        'Esta seção tem sigilo do voto não conforme (regra eliminatória). Use "Solicitar correção".',
-      );
+      const mensagem =
+        'Esta seção tem sigilo do voto não conforme (regra eliminatória). Use "Solicitar correção".';
+      setErro(mensagem);
+      toast.error('Aprovação bloqueada', { description: mensagem });
       return;
     }
 
     if (novoStatus === 'correcao_solicitada') {
       if (!itemId) {
-        setErro('Selecione o item que deve ser corrigido.');
+        const mensagem = 'Selecione o item que deve ser corrigido.';
+        setErro(mensagem);
+        toast.error('Falta o item a corrigir', { description: mensagem });
         return;
       }
       if (!comentario.trim()) {
-        setErro('Descreva o que a equipe precisa corrigir.');
+        const mensagem = 'Descreva o que a equipe precisa corrigir.';
+        setErro(mensagem);
+        toast.error('Falta o comentário', { description: mensagem });
         return;
       }
     }
@@ -287,16 +327,27 @@ function PainelValidacao({
     setEnviando(true);
     try {
       await validarSecao(entrada, validadorId);
-      setSucesso(
+      const mensagem =
         novoStatus === 'aprovada'
           ? `Etapa ${etapa} aprovada.`
-          : `Correção da Etapa ${etapa} solicitada à equipe.`,
-      );
+          : `Correção da Etapa ${etapa} solicitada à equipe.`;
+      setSucesso(mensagem);
+      if (novoStatus === 'aprovada') {
+        toast.success('Etapa aprovada', {
+          description: 'A equipe foi liberada para a próxima etapa.',
+        });
+      } else {
+        toast.success('Correção solicitada', {
+          description: 'A equipe foi notificada para revisar a seção.',
+        });
+      }
       setComentario('');
       setItemId(null);
       onValidado();
     } catch (causa) {
-      setErro(causa instanceof Error ? causa.message : 'Falha ao registrar a validação.');
+      const mensagem = mensagemDeErro(causa, 'Falha ao registrar a validação.');
+      setErro(mensagem);
+      toast.error('Não foi possível registrar', { description: mensagem });
     } finally {
       setEnviando(false);
     }
@@ -333,6 +384,9 @@ function PainelValidacao({
     }
     return (
       <Alert variant="info">
+        <AlertIcon>
+          <TriangleAlert />
+        </AlertIcon>
         <AlertDescription>
           <strong className="block">Etapa {etapa} aguardando envio</strong>
           A equipe de montagem ainda não enviou esta etapa para validação.
@@ -343,32 +397,39 @@ function PainelValidacao({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="border-b border-border">
         <div className="flex flex-col gap-1">
           <CardTitle>Validação da Etapa {etapa}</CardTitle>
           <CardDescription>
-            Revise as evidências desta etapa antes de decidir. A aprovação libera a próxima etapa
-            para a equipe.
+            Revise as evidências antes de decidir. A aprovação libera a próxima etapa.
           </CardDescription>
         </div>
+        <Badge variant={tomStatusEtapa(status)}>{ROTULO_STATUS_ETAPA[status]}</Badge>
       </CardHeader>
-      <CardContent>
+
+      <CardContent className="pt-5">
         {erro && (
           <Alert variant="destructive">
+            <AlertIcon>
+              <TriangleAlert />
+            </AlertIcon>
             <AlertDescription>{erro}</AlertDescription>
           </Alert>
         )}
         {sucesso && (
           <Alert variant="success">
+            <AlertIcon>
+              <CircleCheck />
+            </AlertIcon>
             <AlertDescription>{sucesso}</AlertDescription>
           </Alert>
         )}
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="item-corrigir">Item a corrigir (obrigatório para devolução)</Label>
+          <Label htmlFor="item-corrigir">Item a corrigir</Label>
           <Select value={itemId ?? undefined} onValueChange={(v) => setItemId(v)}>
             <SelectTrigger id="item-corrigir" aria-label="Item a corrigir">
-              <SelectValue placeholder="Selecione o item" />
+              <SelectValue placeholder="Selecione o item (obrigatório para devolver)" />
             </SelectTrigger>
             <SelectContent>
               {itensEtapa.map((item) => (
@@ -381,10 +442,16 @@ function PainelValidacao({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="comentario">Comentário (obrigatório para devolução)</Label>
+          <div className="flex items-baseline justify-between gap-3">
+            <Label htmlFor="comentario">Comentário</Label>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {comentario.length}/{LIMITE_COMENTARIO}
+            </span>
+          </div>
           <Textarea
             id="comentario"
             value={comentario}
+            maxLength={LIMITE_COMENTARIO}
             placeholder="Ex.: foto sem a urna de lona; repetir o enquadramento."
             onChange={(e) => setComentario(e.target.value)}
           />
@@ -413,14 +480,74 @@ function PainelValidacao({
           </Button>
         </div>
 
+        <p className="text-xs text-muted-foreground">
+          A devolução exige selecionar o item e escrever o comentário.
+        </p>
+
         {!conforme && (
           <Alert variant="warning">
+            <AlertIcon>
+              <TriangleAlert />
+            </AlertIcon>
             <AlertDescription>
               A aprovação está bloqueada enquanto houver sigilo do voto não conforme. Registre a
               correção informando o item de sigilo.
             </AlertDescription>
           </Alert>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Resumo da etapa selecionada (progresso, fotos e pendências). */
+function ResumoEtapa({
+  etapa,
+  itensEtapa,
+  itensConcluidos,
+  fotosEnviadas,
+  fotosEtapa,
+  fotosSemEnvio,
+  naoConformes,
+  sigilo,
+}: {
+  etapa: Etapa;
+  itensEtapa: number;
+  itensConcluidos: number;
+  fotosEnviadas: number;
+  fotosEtapa: number;
+  fotosSemEnvio: number;
+  naoConformes: number;
+  sigilo: number;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-0.5">
+          <CardTitle>Resumo da Etapa {etapa}</CardTitle>
+          <CardDescription>Visão rápida do que foi enviado pela equipe</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Progresso
+          concluidos={itensConcluidos}
+          total={itensEtapa}
+          rotulo={`${itensConcluidos} de ${itensEtapa} itens respondidos`}
+        />
+        <dl className="grid grid-cols-2 gap-3">
+          <Indicador rotulo="Fotos enviadas" valor={`${fotosEnviadas}/${fotosEtapa}`} />
+          <Indicador
+            rotulo="Sem foto"
+            valor={fotosSemEnvio}
+            tone={fotosSemEnvio > 0 ? 'text-warning' : 'text-foreground'}
+          />
+          <Indicador
+            rotulo="Não conformes"
+            valor={naoConformes}
+            tone={naoConformes > 0 ? 'text-danger' : 'text-foreground'}
+          />
+          <Indicador rotulo="Perguntas de sigilo" valor={sigilo} />
+        </dl>
       </CardContent>
     </Card>
   );
@@ -441,36 +568,86 @@ function Historico({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Histórico de validações</CardTitle>
+        <div className="flex flex-col gap-0.5">
+          <CardTitle>Histórico de validações</CardTitle>
+          <CardDescription>Decisões registradas nesta seção</CardDescription>
+        </div>
       </CardHeader>
       <CardContent>
-        {validacoes.map((v) => (
-          <div
-            key={v.id}
-            className="flex flex-col gap-1 border-b border-border pb-3 last:border-0 last:pb-0"
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={v.status === 'aprovada' ? 'success' : 'danger'}>
-                Etapa {v.etapa}: {ROTULO_STATUS_ETAPA[v.status]}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {new Date(v.data).toLocaleString('pt-BR')}
-              </span>
-            </div>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <UserIcon className="size-3.5" />
-              {v.validadorNome ?? 'Validador'}
-            </p>
-            {v.item_devolvido && (
-              <p className="text-xs text-foreground">
-                Item devolvido: {nomeDoItem(v.item_devolvido)}
-              </p>
-            )}
-            {v.comentario && <p className="text-xs text-foreground">{v.comentario}</p>}
-          </div>
-        ))}
+        <ol className="flex flex-col gap-5">
+          {validacoes.map((v, indice) => {
+            const aprovada = v.status === 'aprovada';
+            const ultima = indice === validacoes.length - 1;
+            return (
+              <li key={v.id} className="relative flex gap-3">
+                {!ultima && (
+                  <span
+                    aria-hidden
+                    className="absolute -bottom-5 left-[13px] top-7 w-px bg-border"
+                  />
+                )}
+                <span
+                  className={cn(
+                    'z-10 mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full',
+                    aprovada ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger',
+                  )}
+                >
+                  {aprovada ? (
+                    <CircleCheck className="size-4" />
+                  ) : (
+                    <TriangleAlert className="size-4" />
+                  )}
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-sm font-semibold text-foreground">
+                      Etapa {v.etapa} · {ROTULO_STATUS_ETAPA[v.status]}
+                    </span>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {new Date(v.data).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <UserIcon className="size-3.5" />
+                    {v.validadorNome ?? 'Validador'}
+                  </span>
+                  {v.item_devolvido && (
+                    <span className="text-xs text-foreground">
+                      Item devolvido: {nomeDoItem(v.item_devolvido)}
+                    </span>
+                  )}
+                  {v.comentario && (
+                    <p className="rounded-md bg-muted px-2.5 py-1.5 text-xs text-foreground">
+                      {v.comentario}
+                    </p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       </CardContent>
     </Card>
+  );
+}
+
+function EsqueletoSecao() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-4 w-64" />
+        <Skeleton className="h-7 w-56" />
+        <Skeleton className="h-5 w-72" />
+      </div>
+      <Skeleton className="h-10 w-full rounded-lg sm:max-w-md" />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Skeleton className="h-96 rounded-xl" />
+        <div className="flex flex-col gap-6">
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -482,24 +659,28 @@ export function SecaoDetalhe() {
   const [foto, setFoto] = useState<FotoAberta | null>(null);
 
   const { data, isLoading, error } = useSecao(secaoId);
+  useAvisoErro(error);
 
-  if (isLoading) return <Spinner label="Carregando seção..." />;
+  if (isLoading) return <EsqueletoSecao />;
 
   if (error || !data) {
     return (
-      <div className="flex flex-col gap-4">
-        <Link
-          to={`/locais/${localId}`}
-          className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-primary-subtle-foreground hover:underline"
-        >
-          <ArrowLeft className="size-4" /> Voltar ao local
-        </Link>
+      <div className="flex flex-col gap-6">
+        <PageHeader titulo="Seção" />
         <Alert variant="destructive">
-          <AlertDescription>
-            <strong className="block">Não foi possível carregar a seção</strong>
-            {error instanceof Error ? error.message : 'Seção não encontrada.'}
-          </AlertDescription>
+          <AlertIcon>
+            <TriangleAlert />
+          </AlertIcon>
+          <div className="flex flex-col gap-1">
+            <AlertTitle>Não foi possível carregar a seção</AlertTitle>
+            <AlertDescription>
+              {error instanceof Error ? error.message : 'Seção não encontrada.'}
+            </AlertDescription>
+          </div>
         </Alert>
+        <Button variant="outline" className="w-fit" asChild>
+          <Link to={`/locais/${localId}`}>Voltar ao local</Link>
+        </Button>
       </div>
     );
   }
@@ -513,6 +694,10 @@ export function SecaoDetalhe() {
   const fotosSemEnvio = itensEtapa.filter(
     (item) => item.tipo === 'foto' && !(evidenciasPorItem[item.id]?.length),
   ).length;
+  const fotosEtapa = itensEtapa.filter((item) => item.tipo === 'foto').length;
+  const fotosEnviadas = Math.max(fotosEtapa - fotosSemEnvio, 0);
+  const naoConformesEtapa = itensEtapa.filter((item) => item.status === 'nao_conforme').length;
+  const itensConcluidosEtapa = itensEtapa.filter((item) => item.status !== 'pendente').length;
 
   function recarregar() {
     void queryClient.invalidateQueries({ queryKey: ['secao', secaoId] });
@@ -521,150 +706,191 @@ export function SecaoDetalhe() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        to={`/locais/${localId}`}
-        className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-primary-subtle-foreground hover:underline"
-      >
-        <ArrowLeft className="size-4" /> Voltar ao local
-      </Link>
-
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold text-foreground">
-          Seção {secao.numero}
-          {local ? ` · ${local.zona}ª zona` : ''}
-        </h1>
-        <p className="text-sm text-muted-foreground">{local?.nome ?? 'Local não identificado'}</p>
-        {equipes.length > 0 && (
-          <p className="text-xs text-muted-foreground">Equipe(s): {equipes.join(', ')}</p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Badge variant={tomStatusEtapa(secao.status_etapa1)}>
-            Etapa 1: {ROTULO_STATUS_ETAPA[secao.status_etapa1]}
-          </Badge>
-          <Badge variant={tomStatusEtapa(secao.status_etapa2)}>
-            Etapa 2: {ROTULO_STATUS_ETAPA[secao.status_etapa2]}
-          </Badge>
-          <Badge variant={secao.conforme ? 'success' : 'danger'}>
-            {secao.conforme ? 'Conforme' : 'Sigilo não conforme'}
-          </Badge>
-        </div>
-      </div>
+      <PageHeader
+        titulo={`Seção ${secao.numero}${local ? ` · ${local.zona}ª zona` : ''}`}
+        descricao={
+          <>
+            {local?.nome ?? 'Local não identificado'}
+            {equipes.length > 0 ? ` · Equipe(s): ${equipes.join(', ')}` : ''}
+          </>
+        }
+        acoes={
+          <>
+            <Badge variant={tomStatusEtapa(secao.status_etapa1)}>
+              Etapa 1: {ROTULO_STATUS_ETAPA[secao.status_etapa1]}
+            </Badge>
+            <Badge variant={tomStatusEtapa(secao.status_etapa2)}>
+              Etapa 2: {ROTULO_STATUS_ETAPA[secao.status_etapa2]}
+            </Badge>
+            <Badge variant={secao.conforme ? 'success' : 'danger'}>
+              {secao.conforme ? 'Conforme' : 'Sigilo não conforme'}
+            </Badge>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={recarregar}
+                  aria-label="Atualizar dados da seção"
+                >
+                  <RefreshCw />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Recarregar os dados do servidor</TooltipContent>
+            </Tooltip>
+          </>
+        }
+      />
 
       {!secao.conforme && (
         <Alert variant="destructive">
           <AlertIcon>
             <TriangleAlert />
           </AlertIcon>
-          <AlertDescription>
-            <strong className="block">Sigilo do voto não conforme (eliminatório)</strong>
-            A seção tem ao menos uma resposta de sigilo "Não". Não pode ser aprovada antes da
-            correção, conforme a regra 1 do PRD.
-          </AlertDescription>
+          <div className="flex flex-col gap-1">
+            <AlertTitle>Sigilo do voto não conforme (eliminatório)</AlertTitle>
+            <AlertDescription>
+              A seção tem ao menos uma resposta de sigilo "Não". Não pode ser aprovada antes da
+              correção, conforme a regra 1 do PRD.
+            </AlertDescription>
+          </div>
         </Alert>
       )}
 
       <Tabs value={String(etapa)} onValueChange={(v) => setEtapa(Number(v) as Etapa)}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 sm:max-w-md">
           <TabsTrigger value="1">Etapa 1 · Montagem</TabsTrigger>
           <TabsTrigger value="2">Etapa 2 · Sigilo do voto</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {perfil && (
-        <PainelValidacao
-          detalhe={data}
-          etapa={etapa}
-          status={statusEtapa}
-          conforme={secao.conforme}
-          validadorId={perfil.id}
-          ultima={ultimaDaEtapa}
-          onValidado={recarregar}
-        />
-      )}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        {/* Coluna principal: checklist + respostas de sigilo. */}
+        <div className="flex flex-col gap-6">
+          {itensEtapa.length === 0 ? (
+            <EmptyState
+              titulo="Nenhum item nesta etapa"
+              descricao="Os itens são materializados quando o cronograma do local é criado."
+            />
+          ) : (
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-border">
+                <div className="flex flex-col gap-0.5">
+                  <CardTitle>Checklist da Etapa {etapa}</CardTitle>
+                  <CardDescription>
+                    {itensEtapa.length} item(ns)
+                    {fotosSemEnvio > 0 ? ` · ${fotosSemEnvio} sem foto` : ''}
+                    {' · clique na foto para ampliar'}
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ul className="divide-y divide-border">
+                  {itensEtapa.map((item) => (
+                    <ItemRevisao
+                      key={item.id}
+                      item={item}
+                      evidencias={evidenciasPorItem[item.id] ?? []}
+                      desvio={desvioPorItem[item.id] ?? null}
+                      urls={urls}
+                      onAbrir={setFoto}
+                    />
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
-      {itensEtapa.length === 0 ? (
-        <EmptyState
-          titulo="Nenhum item nesta etapa"
-          descricao="Os itens são materializados quando o cronograma do local é criado."
-        />
-      ) : (
-        <Card className="overflow-hidden">
-          <div className="flex flex-col gap-0.5 border-b border-border px-5 py-4">
-            <CardTitle>Checklist da Etapa {etapa}</CardTitle>
-            <CardDescription>
-              {itensEtapa.length} item(ns)
-              {fotosSemEnvio > 0 ? ` · ${fotosSemEnvio} sem foto` : ''}
-              {' · clique na foto para ampliar'}
-            </CardDescription>
-          </div>
-          <ul className="divide-y divide-border">
-            {itensEtapa.map((item) => (
-              <ItemRevisao
-                key={item.id}
-                item={item}
-                evidencias={evidenciasPorItem[item.id] ?? []}
-                desvio={desvioPorItem[item.id] ?? null}
-                urls={urls}
-                onAbrir={setFoto}
+          {sigiloDaEtapa.length > 0 && (
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b border-border">
+                <div className="flex flex-col gap-0.5">
+                  <CardTitle>Respostas de sigilo</CardTitle>
+                  <CardDescription>
+                    Perguntas eliminatórias da Etapa 2 (regra 1 do PRD).
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ul className="divide-y divide-border">
+                  {sigiloDaEtapa.map((s) => (
+                    <li
+                      key={s.id}
+                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3"
+                    >
+                      <span className="min-w-0 flex-1 text-sm text-foreground">{s.pergunta}</span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {s.critica && <Badge variant="outline">Crítica</Badge>}
+                        <ChipResposta resposta={s.resposta} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Coluna lateral: validação (fixa ao rolar), resumo e histórico. */}
+        <div className="flex flex-col gap-6">
+          <div className="xl:sticky xl:top-24">
+            {perfil && (
+              <PainelValidacao
+                detalhe={data}
+                etapa={etapa}
+                status={statusEtapa}
+                conforme={secao.conforme}
+                validadorId={perfil.id}
+                ultima={ultimaDaEtapa}
+                onValidado={recarregar}
               />
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {sigiloDaEtapa.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="flex flex-col gap-0.5 border-b border-border px-5 py-4">
-            <CardTitle>Respostas de sigilo</CardTitle>
-            <CardDescription>
-              Perguntas eliminatórias da Etapa 2 (regra 1 do PRD).
-            </CardDescription>
+            )}
           </div>
-          <ul className="divide-y divide-border">
-            {sigiloDaEtapa.map((s) => (
-              <li
-                key={s.id}
-                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3"
-              >
-                <span className="min-w-0 flex-1 text-sm text-foreground">{s.pergunta}</span>
-                <span className="flex shrink-0 items-center gap-2">
-                  {s.critica && <Badge variant="outline">Crítica</Badge>}
-                  <ChipResposta resposta={s.resposta} />
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
 
-      <Historico validacoes={validacoes} itens={itens} />
+          <ResumoEtapa
+            etapa={etapa}
+            itensEtapa={itensEtapa.length}
+            itensConcluidos={itensConcluidosEtapa}
+            fotosEnviadas={fotosEnviadas}
+            fotosEtapa={fotosEtapa}
+            fotosSemEnvio={fotosSemEnvio}
+            naoConformes={naoConformesEtapa}
+            sigilo={sigiloDaEtapa.length}
+          />
+
+          <Historico validacoes={validacoes} itens={itens} />
+        </div>
+      </div>
 
       <Dialog open={foto !== null} onOpenChange={(aberto) => !aberto && setFoto(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-5xl p-0">
           {foto && (
             <>
-              <div className="border-b border-border p-4 pr-14">
+              <div className="border-b border-border p-5 pr-14">
                 <DialogTitle>{foto.titulo}</DialogTitle>
                 <DialogDescription>
                   {foto.numero != null ? `Foto #${foto.numero} · ` : ''}
                   {foto.capturada ?? 'Data não informada'}
-                  {foto.coords ? ` · ${foto.coords}` : ''}
+                  {foto.coords ? ` · ${foto.coords}` : ''} · Pressione Esc para fechar
                 </DialogDescription>
               </div>
-              <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-muted p-2">
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-muted p-3">
                 <img
                   src={foto.url}
                   alt={foto.titulo}
-                  className="max-h-[70vh] w-auto rounded-md object-contain"
+                  className="max-h-[72vh] w-auto rounded-md object-contain"
                 />
               </div>
               {(foto.observacao || foto.desvio) && (
-                <div className="flex flex-col gap-2 border-t border-border p-4">
+                <div className="flex flex-col gap-2 border-t border-border p-5">
                   {foto.observacao && (
                     <p className="text-sm text-foreground">Obs.: {foto.observacao}</p>
                   )}
                   {foto.desvio && (
                     <Alert variant="warning">
+                      <AlertIcon>
+                        <TriangleAlert />
+                      </AlertIcon>
                       <AlertDescription>
                         <strong className="block">
                           Desvio: {ROTULO_MOTIVO[foto.desvio.motivo]}

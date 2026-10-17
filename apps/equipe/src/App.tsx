@@ -10,6 +10,7 @@ import { ChecklistEtapa } from '@/features/secoes/ChecklistEtapa';
 import { ResumoEtapa } from '@/features/secoes/ResumoEtapa';
 import { Sincronizacao } from '@/features/sync/Sincronizacao';
 import { Configuracoes } from '@/features/config/Configuracoes';
+import { ToasterAvisos } from '@/lib/avisos';
 
 function Protegido({ children }: { children: ReactNode }) {
   const perfil = useSessao((s) => s.perfil);
@@ -18,35 +19,40 @@ function Protegido({ children }: { children: ReactNode }) {
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
+    <>
+      <Routes>
+        <Route path="/login" element={<Login />} />
 
-      <Route
-        element={
-          <Protegido>
-            <AppShell />
-          </Protegido>
-        }
-      >
-        <Route path="/locais" element={<MeusLocais />} />
-        <Route path="/locais/:localId" element={<LocalDetalhe />} />
         <Route
-          path="/locais/:localId/secoes/:secaoId"
-          element={<SecaoDetalhe />}
-        />
-        <Route
-          path="/locais/:localId/secoes/:secaoId/etapa/:etapa"
-          element={<ChecklistEtapa />}
-        />
-        <Route
-          path="/locais/:localId/secoes/:secaoId/etapa/:etapa/resumo"
-          element={<ResumoEtapa />}
-        />
-        <Route path="/sincronizacao" element={<Sincronizacao />} />
-        <Route path="/config" element={<Configuracoes />} />
-      </Route>
+          element={
+            <Protegido>
+              <AppShell />
+            </Protegido>
+          }
+        >
+          <Route path="/locais" element={<MeusLocais />} />
+          <Route path="/locais/:localId" element={<LocalDetalhe />} />
+          <Route
+            path="/locais/:localId/secoes/:secaoId"
+            element={<SecaoDetalhe />}
+          />
+          <Route
+            path="/locais/:localId/secoes/:secaoId/etapa/:etapa"
+            element={<ChecklistEtapa />}
+          />
+          <Route
+            path="/locais/:localId/secoes/:secaoId/etapa/:etapa/resumo"
+            element={<ResumoEtapa />}
+          />
+          <Route path="/sincronizacao" element={<Sincronizacao />} />
+          <Route path="/config" element={<Configuracoes />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/locais" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/locais" replace />} />
+      </Routes>
+
+      {/* Toaster no topo do app: disponível em todas as rotas, inclusive o Login. */}
+      <ToasterAvisos />
+    </>
   );
 }

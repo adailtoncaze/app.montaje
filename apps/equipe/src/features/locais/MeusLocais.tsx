@@ -1,13 +1,20 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate } from 'react-router-dom';
-import type { Local, Secao } from '@montaje/core';
+import type { Etapa, Local, Secao } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
-import { CheckmarkCircle24Regular, Location24Regular, Warning24Regular } from '@fluentui/react-icons';
+import {
+  CheckmarkCircle24Regular,
+  Location24Regular,
+  Warning24Regular,
+} from '@fluentui/react-icons';
 import {
   BarraProgresso,
   CabecalhoApp,
   Cartao,
+  ConteudoPagina,
+  EsqueletoLista,
   EstadoVazio,
+  IndicadorConexao,
   Medalhao,
   Selo,
   pontoDesktop,
@@ -18,16 +25,6 @@ import { useSessao } from '@/features/auth/store';
 import { FaixaInstalar } from '@/features/pwa/FaixaInstalar';
 
 const useClasses = makeStyles({
-  pagina: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalM,
-    [`@media ${pontoTablet}`]: {
-      padding: tokens.spacingVerticalL,
-      gap: tokens.spacingVerticalL,
-    },
-  },
   lista: {
     display: 'grid',
     gridTemplateColumns: '1fr',
@@ -64,12 +61,14 @@ export function MeusLocais() {
   const navigate = useNavigate();
   const perfil = useSessao((s) => s.perfil);
 
+  // Sem valor padrão na primeira consulta: `undefined` representa "ainda carregando".
+  const locais = useLiveQuery(() => db.locais.toArray(), []);
   const cronograma = useLiveQuery(() => db.cronograma.toArray(), [], []);
-  const locais = useLiveQuery(() => db.locais.toArray(), [], []);
   const secoes = useLiveQuery(() => db.secoes.toArray(), [], []);
   const itens = useLiveQuery(() => db.itens.toArray(), [], []);
 
-  const localPorId = new Map(locais.map((l) => [l.id, l]));
+  const carregando = locais === undefined;
+  const localPorId = new Map((locais ?? []).map((l) => [l.id, l]));
   const secoesPorLocal = new Map<string, Secao[]>();
   for (const s of secoes) {
     const lista = secoesPorLocal.get(s.local_id) ?? [];
@@ -108,12 +107,12 @@ export function MeusLocais() {
       a.local.nome.localeCompare(b.local.nome),
   );
 
-  function progresso(localId: string) {
+  function progresso(localId: string, etapa: Etapa) {
     const ids = new Set((secoesPorLocal.get(localId) ?? []).map((s) => s.id));
-    const doLocal = itens.filter((i) => ids.has(i.secao_id));
+    const daEtapa = itens.filter((i) => ids.has(i.secao_id) && i.etapa === etapa);
     return {
-      concluidos: doLocal.filter((i) => i.status !== 'pendente').length,
-      total: doLocal.length,
+      concluidos: daEtapa.filter((i) => i.status !== 'pendente').length,
+      total: daEtapa.length,
     };
   }
 
@@ -122,12 +121,15 @@ export function MeusLocais() {
       <CabecalhoApp
         titulo="Locais de votação"
         subtitulo={perfil?.nome ?? 'Locais da equipe'}
+        fim={<IndicadorConexao />}
       />
 
-      <div className={c.pagina}>
+      <ConteudoPagina>
         <FaixaInstalar />
 
-        {lista.length === 0 ? (
+        {carregando ? (
+          <EsqueletoLista itens={4} />
+        ) : lista.length === 0 ? (
           <EstadoVazio
             icone={<Location24Regular />}
             titulo="Nenhum local definido"
@@ -137,9 +139,14 @@ export function MeusLocais() {
           <div className={c.lista}>
             {lista.map(({ local }) => {
               const doLocal = secoesPorLocal.get(local.id) ?? [];
-              const p = progresso(local.id);
+              const e1 = progresso(local.id, 1);
+              const e2 = progresso(local.id, 2);
               const naoConforme = doLocal.some((s) => !s.conforme);
-              const concluido = p.total > 0 && p.concluidos === p.total;
+              const concluido =
+                doLocal.length > 0 &&
+                doLocal.every(
+                  (s) => s.status_etapa1 === 'aprovada' && s.status_etapa2 === 'aprovada',
+                );
 
               return (
                 <Cartao
@@ -153,14 +160,17 @@ export function MeusLocais() {
                   }
                   titulo={local.nome}
                   descricao={local.endereco ?? `Zona ${local.zona}`}
+                  acao={
+                    <Selo
+                      texto={concluido ? 'Concluído' : `${doLocal.length} seção(ões)`}
+                      tom={concluido ? 'ok' : 'neutro'}
+                    />
+                  }
                 >
                   <div className={c.conteudo}>
                     <div className={c.meta}>
-                      <Selo texto={`Zona ${local.zona}`} tom="neutro" />
-                      <Selo
-                        texto={`${doLocal.length} seção(ões)`}
-                        tom="neutro"
-                      />
+                      <Selo texto={`Zona ${local.zona}`} tom="marca" />
+                      {concluido && <Selo texto="Tudo aprovado" tom="ok" />}
                     </div>
 
                     {naoConforme && (
@@ -172,11 +182,18 @@ export function MeusLocais() {
                       </span>
                     )}
 
-                    {p.total > 0 && (
+                    {e1.total > 0 && (
                       <BarraProgresso
-                        concluidos={p.concluidos}
-                        total={p.total}
-                        rotulo={`${p.concluidos} de ${p.total} itens concluídos`}
+                        concluidos={e1.concluidos}
+                        total={e1.total}
+                        rotulo={`Etapa 1 · ${e1.concluidos} de ${e1.total} itens`}
+                      />
+                    )}
+                    {e2.total > 0 && (
+                      <BarraProgresso
+                        concluidos={e2.concluidos}
+                        total={e2.total}
+                        rotulo={`Etapa 2 · ${e2.concluidos} de ${e2.total} itens`}
                       />
                     )}
                   </div>
@@ -185,7 +202,7 @@ export function MeusLocais() {
             })}
           </div>
         )}
-      </div>
+      </ConteudoPagina>
     </>
   );
 }

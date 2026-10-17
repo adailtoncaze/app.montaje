@@ -1,9 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 
+const pacote = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf-8'),
+) as { version: string };
+
 export default defineConfig({
+  define: {
+    __VERSAO_APP__: JSON.stringify(pacote.version),
+  },
   envDir: fileURLToPath(new URL('../..', import.meta.url)),
   plugins: [
     react(),
@@ -18,8 +26,8 @@ export default defineConfig({
         start_url: '/',
         display: 'standalone',
         orientation: 'any',
-        background_color: '#f5f5f5',
-        theme_color: '#5b5fc7',
+        background_color: '#fafafa',
+        theme_color: '#4f46e5',
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

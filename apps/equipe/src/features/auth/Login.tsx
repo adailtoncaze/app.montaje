@@ -2,9 +2,15 @@ import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import { zLoginEquipe, emailSintetico, type LoginEquipe, type Perfil } from '@montaje/core';
-import { Text, Title1, makeStyles, tokens } from '@fluentui/react-components';
-import { Campo, Aviso, Botao } from '@montaje/ui';
+import {
+  zLoginEquipe,
+  emailSintetico,
+  type LoginEquipe,
+  type Perfil,
+} from '@montaje/core';
+import { Text, makeStyles, tokens } from '@fluentui/react-components';
+import { Building24Regular, Key24Regular, Person24Regular } from '@fluentui/react-icons';
+import { Aviso, Botao, Campo, Cartao, Medalhao } from '@montaje/ui';
 import { supabase, supabaseConfigurado } from '@/lib/supabase';
 import { salvarPerfil } from '@/db/repo';
 import { useSessao } from './store';
@@ -13,24 +19,43 @@ const useClasses = makeStyles({
   pagina: {
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: tokens.spacingVerticalL,
+    justifyContent: 'center',
+    gap: tokens.spacingVerticalXL,
     minHeight: '100%',
+    boxSizing: 'border-box',
     padding: tokens.spacingVerticalXXL,
-  },
-  formulario: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-    width: '100%',
-    maxWidth: '380px',
+    paddingTop: `calc(${tokens.spacingVerticalXXL} + env(safe-area-inset-top, 0px))`,
+    paddingBottom: `calc(${tokens.spacingVerticalXXL} + env(safe-area-inset-bottom, 0px))`,
+    background: `radial-gradient(1100px 560px at 50% -12%, ${tokens.colorBrandBackground2}, transparent)`,
   },
   marca: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: tokens.spacingVerticalXS,
+    gap: tokens.spacingVerticalS,
+    textAlign: 'center',
+    maxWidth: '420px',
+  },
+  tituloMarca: {
+    letterSpacing: '-0.02em',
+    color: tokens.colorBrandForeground1,
+  },
+  cartao: {
+    width: '100%',
+    maxWidth: '400px',
+    boxShadow: tokens.shadow16,
+    padding: tokens.spacingVerticalXL,
+  },
+  formulario: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalL,
+  },
+  rodape: {
+    color: tokens.colorNeutralForeground3,
+    textAlign: 'center',
+    maxWidth: '360px',
   },
 });
 
@@ -69,7 +94,7 @@ export function Login() {
 
       await salvarPerfil(perfil as Perfil);
       definirPerfil(perfil as Perfil);
-      navigate('/secoes', { replace: true });
+      navigate('/locais', { replace: true });
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao entrar');
     }
@@ -78,61 +103,67 @@ export function Login() {
   return (
     <main className={c.pagina}>
       <div className={c.marca}>
-        <Text size={600} weight="bold" style={{ color: tokens.colorBrandForeground1 }}>
+        <Medalhao tom="marca" tamanho="grande">
+          <Building24Regular />
+        </Medalhao>
+        <Text className={c.tituloMarca} size={700} weight="bold">
           MontaJE
         </Text>
-        <Title1>Montagem das seções</Title1>
-        <Text size={300}>Entre com a matrícula e o código do cartório</Text>
+        <Text size={300}>Montagem das seções eleitorais</Text>
       </div>
 
-      <form onSubmit={handleSubmit(entrar)} className={c.formulario} noValidate>
-        <Controller
-          name="matricula"
-          control={control}
-          render={({ field }) => (
-            <Campo
-              rotulo="Matrícula"
-              placeholder="Sua matrícula"
-              autoComplete="username"
-              erro={errors.matricula?.message}
-              value={field.value ?? ''}
-              onChange={(_, d) => field.onChange(d.value)}
-              onBlur={field.onBlur}
-              name={field.name}
-            />
+      <Cartao className={c.cartao}>
+        <form onSubmit={handleSubmit(entrar)} className={c.formulario} noValidate>
+          <Controller
+            name="matricula"
+            control={control}
+            render={({ field }) => (
+              <Campo
+                rotulo="Matrícula"
+                placeholder="Sua matrícula"
+                autoComplete="username"
+                contentBefore={<Person24Regular />}
+                erro={errors.matricula?.message}
+                value={field.value ?? ''}
+                onChange={(_, d) => field.onChange(d.value)}
+                onBlur={field.onBlur}
+                name={field.name}
+              />
+            )}
+          />
+
+          <Controller
+            name="codigo"
+            control={control}
+            render={({ field }) => (
+              <Campo
+                rotulo="Código de acesso"
+                type="password"
+                placeholder="Código fornecido pelo cartório"
+                autoComplete="current-password"
+                contentBefore={<Key24Regular />}
+                erro={errors.codigo?.message}
+                value={field.value ?? ''}
+                onChange={(_, d) => field.onChange(d.value)}
+                onBlur={field.onBlur}
+                name={field.name}
+              />
+            )}
+          />
+
+          {erro && (
+            <Aviso tom="erro" titulo="Não foi possível entrar">
+              {erro}
+            </Aviso>
           )}
-        />
 
-        <Controller
-          name="codigo"
-          control={control}
-          render={({ field }) => (
-            <Campo
-              rotulo="Código de acesso"
-              type="password"
-              placeholder="Código fornecido pelo cartório"
-              autoComplete="current-password"
-              erro={errors.codigo?.message}
-              value={field.value ?? ''}
-              onChange={(_, d) => field.onChange(d.value)}
-              onBlur={field.onBlur}
-              name={field.name}
-            />
-          )}
-        />
+          <Botao type="submit" larguraTotal carregando={isSubmitting}>
+            Entrar
+          </Botao>
+        </form>
+      </Cartao>
 
-        {erro && (
-          <Aviso tom="erro" titulo="Não foi possível entrar">
-            {erro}
-          </Aviso>
-        )}
-
-        <Botao type="submit" carregando={isSubmitting}>
-          Entrar
-        </Botao>
-      </form>
-
-      <Text size={200} align="center">
+      <Text size={200} className={c.rodape}>
         Sem cadastro aberto. O código é fornecido pelo cartório eleitoral.
       </Text>
     </main>

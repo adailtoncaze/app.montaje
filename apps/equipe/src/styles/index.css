@@ -1,5 +1,6 @@
-/* Base mínima. O tema, tipografia e cores vêm do design system (Fluent 2 / Teams)
-   aplicado pelo <ProvedorMontaje /> via tokens. */
+/* Base mínima. Tema, tipografia e cores vêm do design system (Fluent 2),
+   aplicado pelo <ProvedorMontaje /> via tokens. Nada de cores fixas aqui:
+   o fundo do documento é definido por `data-tema` no <html> (index.html). */
 
 html,
 body,
@@ -7,15 +8,44 @@ body,
   height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  background-color: #f5f5f5;
+  font-family: 'Inter Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contorno de foco visível com a cor da marca (fallback para quando o token do
+   Fluent não está no escopo, ex.: elementos fora do <FluentProvider>). */
+:focus-visible {
+  outline-width: 2px;
+  outline-style: solid;
+  outline-color: var(--colorStrokeFocus2, #4f46e5);
+  outline-offset: 2px;
+}
+
+/* Área segura (iOS/PWA) disponível para os componentes que precisarem. */
+:root {
+  --montaje-safe-area-top: env(safe-area-inset-top, 0px);
+  --montaje-safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

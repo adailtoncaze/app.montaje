@@ -1,23 +1,23 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ROTULO_STATUS_ETAPA,
   etapaLiberada,
   motivoBloqueioEtapa2,
   type Etapa,
+  type StatusEtapa,
 } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
-import {
-  ArrowLeft24Regular,
-  ArrowSync24Regular,
-  LockClosed24Regular,
-} from '@fluentui/react-icons';
+import { ArrowSync24Regular, LockClosed24Regular } from '@fluentui/react-icons';
 import {
   Aviso,
   Botao,
   CabecalhoApp,
   Cartao,
+  ConteudoPagina,
+  EsqueletoLista,
+  IndicadorConexao,
   Medalhao,
   Selo,
   BarraProgresso,
@@ -26,18 +26,9 @@ import {
 import { db } from '@/db/schema';
 import { tomStatusEtapa } from '@/lib/status-ui';
 import { baixarAlteracoes } from '@/features/sync/download';
+import { useAvisos } from '@/lib/avisos';
 
 const useClasses = makeStyles({
-  pagina: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalM,
-    [`@media ${pontoTablet}`]: {
-      padding: tokens.spacingVerticalL,
-      gap: tokens.spacingVerticalL,
-    },
-  },
   lista: {
     display: 'grid',
     gridTemplateColumns: '1fr',
@@ -64,6 +55,22 @@ const useClasses = makeStyles({
   },
 });
 
+/** Rótulo e destaque do CTA de acordo com o status atual da etapa. */
+function acaoDaEtapa(status: StatusEtapa): { rotulo: string; variante: 'primario' | 'secundario' } {
+  switch (status) {
+    case 'em_montagem':
+      return { rotulo: 'Continuar checklist', variante: 'primario' };
+    case 'correcao_solicitada':
+      return { rotulo: 'Corrigir e reenviar', variante: 'primario' };
+    case 'enviada':
+      return { rotulo: 'Ver checklist enviado', variante: 'secundario' };
+    case 'aprovada':
+      return { rotulo: 'Ver checklist aprovado', variante: 'secundario' };
+    default:
+      return { rotulo: 'Abrir checklist', variante: 'primario' };
+  }
+}
+
 function CartaoEtapa({
   etapa,
   status,
@@ -72,25 +79,28 @@ function CartaoEtapa({
   href,
   concluidos,
   total,
+  aoAbrir,
 }: {
   etapa: Etapa;
-  status: Parameters<typeof tomStatusEtapa>[0];
+  status: StatusEtapa;
   bloqueada: boolean;
   motivo: string | null;
   href: string;
   concluidos: number;
   total: number;
+  aoAbrir: (href: string) => void;
 }) {
   const c = useClasses();
   const descricao =
     etapa === 1
       ? 'Layout, cartazes e definição da posição da urna (fotos 1 a 3).'
       : 'Instalação da urna e verificação do sigilo do voto (foto 4).';
+  const acao = acaoDaEtapa(status);
 
   return (
     <Cartao
       inicio={
-        <Medalhao tom={bloqueada ? 'neutro' : 'marca'}>
+        <Medalhao tom={bloqueada ? 'neutro' : status === 'aprovada' ? 'ok' : 'marca'}>
           {bloqueada ? <LockClosed24Regular /> : etapa}
         </Medalhao>
       }
@@ -107,9 +117,11 @@ function CartaoEtapa({
             <Text size={200}>{motivo ?? 'Etapa bloqueada.'}</Text>
           </span>
         ) : (
-          <Link to={href} style={{ textDecorationLine: 'none' }} className={c.acao}>
-            <Botao variante="secundario">Abrir checklist</Botao>
-          </Link>
+          <div className={c.acao}>
+            <Botao variante={acao.variante} onClick={() => aoAbrir(href)}>
+              {acao.rotulo}
+            </Botao>
+          </div>
         )}
       </div>
     </Cartao>
@@ -118,6 +130,8 @@ function CartaoEtapa({
 
 export function SecaoDetalhe() {
   const c = useClasses();
+  const navigate = useNavigate();
+  const avisos = useAvisos();
   const { localId = '', secaoId = '' } = useParams();
   const secao = useLiveQuery(() => db.secoes.get(secaoId), [secaoId]);
   const local = useLiveQuery(
@@ -135,22 +149,23 @@ export function SecaoDetalhe() {
     [],
   );
   const [verificando, setVerificando] = useState(false);
-  const [avisoCheck, setAvisoCheck] = useState<string | null>(null);
 
   const voltar = `/locais/${localId}`;
 
   async function verificarCartorio() {
-    setAvisoCheck(null);
     setVerificando(true);
     try {
       const n = await baixarAlteracoes();
-      setAvisoCheck(
-        n > 0
-          ? 'Status atualizado pelo cartório.'
-          : 'Nenhuma novidade do cartório até agora.',
-      );
+      if (n > 0) {
+        avisos.sucesso('Status atualizado', 'Há novidades do cartório para esta equipe.');
+      } else {
+        avisos.info('Tudo em dia', 'Nenhuma novidade do cartório até agora.');
+      }
     } catch {
-      setAvisoCheck('Não foi possível verificar agora. Confira a conexão e tente de novo.');
+      avisos.erro(
+        'Não foi possível verificar',
+        'Confira a conexão e tente novamente.',
+      );
     } finally {
       setVerificando(false);
     }
@@ -159,17 +174,10 @@ export function SecaoDetalhe() {
   if (!secao) {
     return (
       <>
-        <CabecalhoApp
-          titulo="Seção"
-          inicio={
-            <Link to={voltar} aria-label="Voltar">
-              <ArrowLeft24Regular />
-            </Link>
-          }
-        />
-        <div className={c.pagina}>
-          <Text>Carregando seção…</Text>
-        </div>
+        <CabecalhoApp titulo="Seção" aoVoltar={() => navigate(voltar)} />
+        <ConteudoPagina>
+          <EsqueletoLista itens={2} />
+        </ConteudoPagina>
       </>
     );
   }
@@ -195,25 +203,22 @@ export function SecaoDetalhe() {
       .sort((a, b) => (a.data < b.data ? 1 : -1))[0];
   const statusDaEtapa = (etapa: Etapa) =>
     etapa === 1 ? secao.status_etapa1 : secao.status_etapa2;
-  const correcao1 =
-    statusDaEtapa(1) === 'correcao_solicitada' ? correcaoDe(1) : undefined;
-  const correcao2 =
-    statusDaEtapa(2) === 'correcao_solicitada' ? correcaoDe(2) : undefined;
+  const correcao1 = statusDaEtapa(1) === 'correcao_solicitada' ? correcaoDe(1) : undefined;
+  const correcao2 = statusDaEtapa(2) === 'correcao_solicitada' ? correcaoDe(2) : undefined;
   const nomeItem = (id: string | null) => itens.find((i) => i.id === id)?.nome ?? null;
+
+  const abrirEtapa = (href: string) => navigate(href);
 
   return (
     <>
       <CabecalhoApp
         titulo={`Seção ${secao.numero}`}
         subtitulo={local?.nome}
-        inicio={
-          <Link to={voltar} aria-label="Voltar" style={{ color: 'inherit' }}>
-            <ArrowLeft24Regular />
-          </Link>
-        }
+        aoVoltar={() => navigate(voltar)}
+        fim={<IndicadorConexao />}
       />
 
-      <div className={c.pagina}>
+      <ConteudoPagina>
         {!secao.conforme && (
           <Aviso tom="alerta" titulo="Seção não conforme no sigilo do voto">
             Esta seção foi marcada como não conforme. O cartório precisa tratar antes da
@@ -260,12 +265,6 @@ export function SecaoDetalhe() {
           </Botao>
         </div>
 
-        {avisoCheck && (
-          <Aviso tom="info" titulo="Cartório">
-            {avisoCheck}
-          </Aviso>
-        )}
-
         <div className={c.lista}>
           <CartaoEtapa
             etapa={1}
@@ -275,6 +274,7 @@ export function SecaoDetalhe() {
             href={`/locais/${localId}/secoes/${secao.id}/etapa/1`}
             concluidos={e1.concluidos}
             total={e1.total}
+            aoAbrir={abrirEtapa}
           />
 
           <CartaoEtapa
@@ -285,9 +285,10 @@ export function SecaoDetalhe() {
             href={`/locais/${localId}/secoes/${secao.id}/etapa/2`}
             concluidos={e2.concluidos}
             total={e2.total}
+            aoAbrir={abrirEtapa}
           />
         </div>
-      </div>
+      </ConteudoPagina>
     </>
   );
 }

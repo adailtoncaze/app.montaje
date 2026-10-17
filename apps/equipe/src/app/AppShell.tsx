@@ -1,13 +1,19 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   CloudArrowUp24Regular,
   Location24Regular,
   Settings24Regular,
 } from '@fluentui/react-icons';
-import { Text, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
+import { Badge, Text, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
 import { pontoAmplo, pontoTablet } from '@montaje/ui';
 import type { ReactNode } from 'react';
 import { useSyncEngine } from '@/features/sync/useSyncEngine';
+import { db } from '@/db/schema';
+
+const LARGURA_BASE = '720px';
+const LARGURA_TABLET = '1024px';
+const LARGURA_AMPLA = '1240px';
 
 const useClasses = makeStyles({
   app: {
@@ -16,21 +22,21 @@ const useClasses = makeStyles({
     flexGrow: 1,
     minHeight: '100%',
     width: '100%',
-    maxWidth: '720px',
+    maxWidth: LARGURA_BASE,
     marginLeft: 'auto',
     marginRight: 'auto',
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground2,
     [`@media ${pontoTablet}`]: {
-      maxWidth: '1024px',
-      boxShadow: tokens.shadow2,
+      maxWidth: LARGURA_TABLET,
+      boxShadow: tokens.shadow8,
     },
     [`@media ${pontoAmplo}`]: {
-      maxWidth: '1240px',
+      maxWidth: LARGURA_AMPLA,
     },
   },
   conteudo: {
     flexGrow: 1,
-    paddingBottom: 'calc(84px + env(safe-area-inset-bottom, 0px))',
+    paddingBottom: `calc(88px + env(safe-area-inset-bottom, 0px))`,
   },
   nav: {
     position: 'fixed',
@@ -38,9 +44,12 @@ const useClasses = makeStyles({
     left: 0,
     right: 0,
     display: 'flex',
-    maxWidth: '720px',
+    alignItems: 'stretch',
+    maxWidth: LARGURA_BASE,
     marginLeft: 'auto',
     marginRight: 'auto',
+    paddingLeft: tokens.spacingHorizontalS,
+    paddingRight: tokens.spacingHorizontalS,
     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     backgroundColor: tokens.colorNeutralBackground1,
     borderTopWidth: tokens.strokeWidthThin,
@@ -48,12 +57,14 @@ const useClasses = makeStyles({
     borderTopColor: tokens.colorNeutralStroke2,
     boxShadow: tokens.shadow8,
     [`@media ${pontoTablet}`]: {
-      maxWidth: '1024px',
-      borderTopLeftRadius: tokens.borderRadiusXLarge,
-      borderTopRightRadius: tokens.borderRadiusXLarge,
+      maxWidth: LARGURA_TABLET,
+      borderTopLeftRadius: tokens.borderRadiusLarge,
+      borderTopRightRadius: tokens.borderRadiusLarge,
+      paddingLeft: tokens.spacingHorizontalM,
+      paddingRight: tokens.spacingHorizontalM,
     },
     [`@media ${pontoAmplo}`]: {
-      maxWidth: '1240px',
+      maxWidth: LARGURA_AMPLA,
     },
   },
   item: {
@@ -63,17 +74,50 @@ const useClasses = makeStyles({
     alignItems: 'center',
     justifyContent: 'center',
     gap: '2px',
+    minHeight: '56px',
     paddingTop: tokens.spacingVerticalS,
     paddingBottom: tokens.spacingVerticalS,
     textDecorationLine: 'none',
     color: tokens.colorNeutralForeground2,
-    transitionProperty: 'color, background-color',
-    transitionDuration: '120ms',
-    ':hover': { backgroundColor: tokens.colorSubtleBackgroundHover },
+    transitionProperty: 'color',
+    transitionDuration: tokens.durationNormal,
+    transitionTimingFunction: tokens.curveEasyEase,
+    ':hover': { color: tokens.colorNeutralForeground1 },
+    ':focus-visible': {
+      outlineWidth: '2px',
+      outlineStyle: 'solid',
+      outlineColor: tokens.colorStrokeFocus2,
+      outlineOffset: '-2px',
+      borderRadius: tokens.borderRadiusLarge,
+    },
   },
   ativo: {
     color: tokens.colorBrandForeground2,
-    fontWeight: tokens.fontWeightSemibold,
+  },
+  pilula: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '56px',
+    height: '32px',
+    borderRadius: tokens.borderRadiusCircular,
+    transitionProperty: 'background-color',
+    transitionDuration: tokens.durationNormal,
+    transitionTimingFunction: tokens.curveEasyEase,
+  },
+  pilulaAtiva: {
+    backgroundColor: tokens.colorBrandBackground2,
+  },
+  iconeWrap: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: '-4px',
+    right: '-10px',
   },
 });
 
@@ -81,10 +125,12 @@ function ItemNav({
   para,
   rotulo,
   icone,
+  contagem,
 }: {
   para: string;
   rotulo: string;
   icone: ReactNode;
+  contagem?: number;
 }) {
   const c = useClasses();
   return (
@@ -92,16 +138,39 @@ function ItemNav({
       to={para}
       className={({ isActive }) => mergeClasses(c.item, isActive && c.ativo)}
     >
-      {icone}
-      <Text size={200}>{rotulo}</Text>
+      {({ isActive }) => (
+        <>
+          <span className={mergeClasses(c.pilula, isActive && c.pilulaAtiva)}>
+            <span className={c.iconeWrap}>
+              {icone}
+              {contagem != null && contagem > 0 && (
+                <Badge className={c.badge} appearance="filled" color="brand" size="small">
+                  {contagem > 9 ? '9+' : contagem}
+                </Badge>
+              )}
+            </span>
+          </span>
+          <Text size={200} weight={isActive ? 'semibold' : 'regular'}>
+            {rotulo}
+          </Text>
+        </>
+      )}
     </NavLink>
   );
 }
 
 export function AppShell() {
   const c = useClasses();
-  // APP-24: envio automatico enquanto o app estiver aberto (monta uma vez por sessao).
+  // APP-24: envio automático enquanto o app estiver aberto (monta uma vez por sessão).
   useSyncEngine();
+
+  // Contagem apenas leitura da fila de envio, para o badge da navegação.
+  const pendentes = useLiveQuery(
+    () => db.outbox.where('estado').anyOf('pendente_envio', 'erro').count(),
+    [],
+    0,
+  );
+
   return (
     <div className={c.app}>
       <main className={c.conteudo}>
@@ -110,7 +179,12 @@ export function AppShell() {
 
       <nav className={c.nav} aria-label="Navegação principal">
         <ItemNav para="/locais" rotulo="Locais" icone={<Location24Regular />} />
-        <ItemNav para="/sincronizacao" rotulo="Envio" icone={<CloudArrowUp24Regular />} />
+        <ItemNav
+          para="/sincronizacao"
+          rotulo="Envio"
+          icone={<CloudArrowUp24Regular />}
+          contagem={pendentes}
+        />
         <ItemNav para="/config" rotulo="Ajustes" icone={<Settings24Regular />} />
       </nav>
     </div>

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Link, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ROTULO_STATUS_ETAPA,
   etapaLiberada,
@@ -8,16 +8,14 @@ import {
   type Etapa,
 } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
-import {
-  ArrowLeft24Regular,
-  CheckmarkCircle24Regular,
-  LockClosed24Regular,
-} from '@fluentui/react-icons';
+import { CheckmarkCircle24Regular, LockClosed24Regular } from '@fluentui/react-icons';
 import {
   Aviso,
   BarraProgresso,
   Botao,
   CabecalhoApp,
+  ConteudoPagina,
+  EsqueletoLista,
   EstadoVazio,
   Selo,
   pontoTablet,
@@ -30,16 +28,6 @@ import { ReferenciaEtapa1 } from './ReferenciaEtapa1';
 import { SigiloEtapa } from './SigiloEtapa';
 
 const useClasses = makeStyles({
-  pagina: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalM,
-    [`@media ${pontoTablet}`]: {
-      padding: tokens.spacingVerticalL,
-      gap: tokens.spacingVerticalL,
-    },
-  },
   resumo: {
     display: 'flex',
     alignItems: 'center',
@@ -63,13 +51,19 @@ const useClasses = makeStyles({
     color: tokens.colorNeutralForeground3,
   },
   rodape: {
+    position: 'sticky',
+    bottom: `calc(72px + env(safe-area-inset-bottom, 0px))`,
     display: 'flex',
     justifyContent: 'flex-end',
+    paddingTop: tokens.spacingVerticalS,
+    paddingBottom: tokens.spacingVerticalS,
+    backgroundColor: tokens.colorNeutralBackground2,
   },
 });
 
 export function ChecklistEtapa() {
   const c = useClasses();
+  const navigate = useNavigate();
   const { localId = '', secaoId = '', etapa: etapaParam = '1' } = useParams();
   const etapa: Etapa = etapaParam === '2' ? 2 : 1;
 
@@ -86,6 +80,11 @@ export function ChecklistEtapa() {
         .and((i) => i.etapa === etapa)
         .toArray(),
     [secaoId, etapa],
+    [],
+  );
+  const validacoes = useLiveQuery(
+    () => db.validacoes.where('secao_id').equals(secaoId).toArray(),
+    [secaoId],
     [],
   );
 
@@ -105,6 +104,19 @@ export function ChecklistEtapa() {
   const bloqueada = etapa === 2 && secao ? !etapaLiberada(2, secao.status_etapa1) : false;
   const motivo = secao ? motivoBloqueioEtapa2(secao.status_etapa1) : null;
 
+  // Última devolução do cartório para esta etapa. Fica visível já nesta tela
+  // (sem precisar abrir o resumo): a equipe vê o motivo e qual item corrigir.
+  const correcao =
+    statusEtapa === 'correcao_solicitada'
+      ? [...validacoes]
+          .filter((v) => v.etapa === etapa && v.status === 'correcao_solicitada')
+          .sort((a, b) => b.data.localeCompare(a.data))[0]
+      : undefined;
+  const itemDevolvido = correcao?.item_devolvido
+    ? itens.find((i) => i.id === correcao.item_devolvido)?.nome ?? null
+    : null;
+  const devolvidoId = correcao?.item_devolvido ?? null;
+
   return (
     <>
       <CabecalhoApp
@@ -112,16 +124,12 @@ export function ChecklistEtapa() {
         subtitulo={
           secao ? `Seção ${secao.numero}${local ? ` · ${local.nome}` : ''}` : undefined
         }
-        inicio={
-          <Link to={voltar} aria-label="Voltar" style={{ color: 'inherit' }}>
-            <ArrowLeft24Regular />
-          </Link>
-        }
+        aoVoltar={() => navigate(voltar)}
       />
 
-      <div className={c.pagina}>
+      <ConteudoPagina>
         {!secao ? (
-          <Text>Carregando checklist…</Text>
+          <EsqueletoLista itens={3} />
         ) : bloqueada ? (
           <>
             <Aviso tom="alerta" titulo="Etapa 2 bloqueada">
@@ -134,6 +142,25 @@ export function ChecklistEtapa() {
           </>
         ) : (
           <>
+            {correcao && (
+              <Aviso tom="erro" titulo="Correção solicitada pelo cartório">
+                {itemDevolvido && (
+                  <Text size={200} weight="semibold" block>
+                    Item a corrigir: {itemDevolvido}
+                  </Text>
+                )}
+                {correcao.comentario && (
+                  <Text size={200} block>
+                    {correcao.comentario}
+                  </Text>
+                )}
+                <Text size={200} block>
+                  Ajuste o item indicado e use “Revisar e enviar” no fim da página para
+                  devolver a etapa ao cartório.
+                </Text>
+              </Aviso>
+            )}
+
             <Aviso tom="alerta" titulo="Não fotografe pessoas">
               Enquadre apenas o ambiente da seção: cartazes, mesa dos mesários e o local da
               urna/cabine. As fotos são obrigatórias e preservam o sigilo do voto.
@@ -142,7 +169,10 @@ export function ChecklistEtapa() {
             {etapa === 2 && <ReferenciaEtapa1 secaoId={secaoId} />}
 
             <div className={c.resumo}>
-              <Selo texto={ROTULO_STATUS_ETAPA[statusEtapa]} tom={tomStatusEtapa(statusEtapa)} />
+              <Selo
+                texto={ROTULO_STATUS_ETAPA[statusEtapa]}
+                tom={tomStatusEtapa(statusEtapa)}
+              />
               <BarraProgresso
                 concluidos={concluidos}
                 total={itens.length}
@@ -178,6 +208,7 @@ export function ChecklistEtapa() {
                           item={item}
                           secaoId={secaoId}
                           somenteLeitura={somenteLeitura}
+                          precisaCorrecao={item.id === devolvidoId}
                         />
                       ) : (
                         <ItemConfirmacao
@@ -185,6 +216,7 @@ export function ChecklistEtapa() {
                           item={item}
                           secaoId={secaoId}
                           somenteLeitura={somenteLeitura}
+                          precisaCorrecao={item.id === devolvidoId}
                         />
                       ),
                     )}
@@ -194,15 +226,17 @@ export function ChecklistEtapa() {
             )}
 
             <div className={c.rodape}>
-              <Link to={resumo} style={{ textDecoration: 'none' }}>
-                <Botao variante="primario" icon={<CheckmarkCircle24Regular />}>
-                  Revisar e enviar
-                </Botao>
-              </Link>
+              <Botao
+                variante="primario"
+                icon={<CheckmarkCircle24Regular />}
+                onClick={() => navigate(resumo)}
+              >
+                Revisar e enviar
+              </Botao>
             </div>
           </>
         )}
-      </div>
+      </ConteudoPagina>
     </>
   );
 }

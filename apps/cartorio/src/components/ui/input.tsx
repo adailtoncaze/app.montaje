@@ -16,7 +16,7 @@ export const Input = forwardRef<HTMLInputElement, ComponentProps<'input'>>(funct
       ref={ref}
       type={type}
       className={cn(
-        'flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground shadow-teams-2 transition-colors placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50',
+        'flex h-9 w-full rounded-lg border border-input bg-card px-3 py-1 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}

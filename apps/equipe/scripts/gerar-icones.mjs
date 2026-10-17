@@ -9,7 +9,7 @@ import { dirname, resolve } from 'node:path';
 const aqui = dirname(fileURLToPath(import.meta.url));
 const publico = resolve(aqui, '..', 'public');
 const svg = readFileSync(resolve(publico, 'icone.svg'));
-const MARCA = '#5b5fc7';
+const MARCA = '#4f46e5';
 
 /** Arredonda o conteúdo sobre um fundo cheio (para maskable e apple-touch). */
 async function sobreFundo(tamanho, fracao, destino) {
