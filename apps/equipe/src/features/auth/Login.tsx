@@ -10,7 +10,7 @@ import {
 } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
 import { Building24Regular, Key24Regular, Person24Regular } from '@fluentui/react-icons';
-import { Aviso, Botao, Campo, Cartao, Medalhao } from '@montaje/ui';
+import { Aviso, Botao, Campo, Cartao, IndicadorConexao, Medalhao } from '@montaje/ui';
 import { supabase, supabaseConfigurado } from '@/lib/supabase';
 import { salvarPerfil } from '@/db/repo';
 import { useSessao } from './store';
@@ -57,6 +57,12 @@ const useClasses = makeStyles({
     textAlign: 'center',
     maxWidth: '360px',
   },
+  conexao: {
+    position: 'fixed',
+    top: `calc(${tokens.spacingVerticalM} + env(safe-area-inset-top, 0px))`,
+    right: tokens.spacingHorizontalM,
+    zIndex: 1,
+  },
 });
 
 export function Login() {
@@ -102,6 +108,10 @@ export function Login() {
 
   return (
     <main className={c.pagina}>
+      <div className={c.conexao}>
+        <IndicadorConexao />
+      </div>
+
       <div className={c.marca}>
         <Medalhao tom="marca" tamanho="grande">
           <Building24Regular />

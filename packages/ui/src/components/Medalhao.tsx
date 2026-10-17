@@ -36,10 +36,10 @@ const useClasses = makeStyles({
     color: tokens.colorNeutralForeground2,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
   },
+  // Verde sem borda: visual mais leve e elegante.
   ok: {
     backgroundColor: tokens.colorPaletteGreenBackground2,
     color: tokens.colorPaletteGreenForeground1,
-    border: `1px solid ${tokens.colorPaletteGreenBorder2}`,
   },
   alerta: {
     backgroundColor: tokens.colorPaletteYellowBackground2,

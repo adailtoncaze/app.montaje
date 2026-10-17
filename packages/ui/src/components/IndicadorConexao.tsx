@@ -1,5 +1,5 @@
 import { Badge, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
-import { Wifi424Regular, WifiOff24Regular } from '@fluentui/react-icons';
+import { Wifi420Filled, WifiOff20Regular } from '@fluentui/react-icons';
 import { useEffect, useState } from 'react';
 
 const useClasses = makeStyles({
@@ -11,9 +11,9 @@ const useClasses = makeStyles({
     color: tokens.colorPaletteYellowForeground1,
     border: `1px solid ${tokens.colorPaletteYellowBorder2}`,
   },
+  // Verde sem borda: visual mais leve e elegante.
   online: {
     color: tokens.colorPaletteGreenForeground1,
-    border: `1px solid ${tokens.colorPaletteGreenBorder2}`,
   },
 });
 
@@ -26,6 +26,9 @@ export interface IndicadorConexaoProps {
 /**
  * Chip de estado da conexão (online/offline) baseado em `navigator.onLine`
  * e nos eventos `online`/`offline`. Reativo para o fluxo offline-first.
+ *
+ * Sempre exibe, ao lado do nome, um ícone de conexão: wi-fi quando conectado
+ * e wi-fi cortado quando sem conexão (tamanho 20px, proporcional ao badge).
  */
 export function IndicadorConexao({ mostrarOnline = true, className }: IndicadorConexaoProps) {
   const c = useClasses();
@@ -52,7 +55,7 @@ export function IndicadorConexao({ mostrarOnline = true, className }: IndicadorC
       appearance="tint"
       color={online ? 'success' : 'warning'}
       size="medium"
-      icon={online ? <Wifi424Regular /> : <WifiOff24Regular />}
+      icon={online ? <Wifi420Filled /> : <WifiOff20Regular />}
       className={mergeClasses(c.chip, online ? c.online : c.offline, className)}
       title={online ? 'Conectado à internet' : 'Sem conexão — os dados serão enviados quando voltar'}
       aria-live="polite"

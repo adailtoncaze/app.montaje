@@ -9,7 +9,6 @@ import {
   Cartao,
   ConteudoPagina,
   EstadoVazio,
-  IndicadorConexao,
   Selo,
   type TomSelo,
 } from '@montaje/ui';
@@ -246,7 +245,6 @@ export function Sincronizacao() {
       <CabecalhoApp
         titulo="Envio"
         subtitulo="Sincronização com o cartório"
-        fim={<IndicadorConexao />}
       />
 
       <ConteudoPagina>

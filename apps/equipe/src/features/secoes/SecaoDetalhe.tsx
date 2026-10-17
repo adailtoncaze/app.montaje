@@ -17,7 +17,6 @@ import {
   Cartao,
   ConteudoPagina,
   EsqueletoLista,
-  IndicadorConexao,
   Medalhao,
   Selo,
   BarraProgresso,
@@ -215,7 +214,6 @@ export function SecaoDetalhe() {
         titulo={`Seção ${secao.numero}`}
         subtitulo={local?.nome}
         aoVoltar={() => navigate(voltar)}
-        fim={<IndicadorConexao />}
       />
 
       <ConteudoPagina>

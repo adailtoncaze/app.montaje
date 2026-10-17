@@ -14,7 +14,6 @@ import {
   ConteudoPagina,
   EsqueletoLista,
   EstadoVazio,
-  IndicadorConexao,
   Medalhao,
   Selo,
   pontoDesktop,
@@ -121,7 +120,6 @@ export function MeusLocais() {
       <CabecalhoApp
         titulo="Locais de votação"
         subtitulo={perfil?.nome ?? 'Locais da equipe'}
-        fim={<IndicadorConexao />}
       />
 
       <ConteudoPagina>

@@ -18,7 +18,8 @@ const COR: Record<TomSelo, NonNullable<BadgeProps['color']>> = {
 };
 
 const BORDA: Record<TomSelo, string> = {
-  ok: tokens.colorPaletteGreenBorder2,
+  // Verde sem borda: visual mais leve e elegante.
+  ok: 'transparent',
   alerta: tokens.colorPaletteYellowBorder2,
   erro: tokens.colorPaletteRedBorder2,
   neutro: tokens.colorNeutralStroke2,

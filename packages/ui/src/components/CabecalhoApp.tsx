@@ -7,6 +7,7 @@ import {
 } from '@fluentui/react-components';
 import { ArrowLeft24Regular } from '@fluentui/react-icons';
 import type { ReactNode } from 'react';
+import { IndicadorConexao } from './IndicadorConexao';
 
 const useClasses = makeStyles({
   barra: {
@@ -64,10 +65,12 @@ export interface CabecalhoAppProps {
   subtitulo?: string;
   /** Conteúdo à esquerda do título (ex.: um botão de menu). */
   inicio?: ReactNode;
-  /** Conteúdo à direita (ex.: um <IndicadorConexao /> ou botão de ação). */
+  /** Conteúdo à direita (ex.: um botão de ação). */
   fim?: ReactNode;
   /** Quando informado, exibe o botão voltar com área de toque confortável. */
   aoVoltar?: () => void;
+  /** Mostra o indicador de conexão (online/sem conexão) à direita. Padrão: true. */
+  conexao?: boolean;
   className?: string;
 }
 
@@ -78,6 +81,7 @@ export function CabecalhoApp({
   inicio,
   fim,
   aoVoltar,
+  conexao = true,
   className,
 }: CabecalhoAppProps) {
   const c = useClasses();
@@ -105,7 +109,12 @@ export function CabecalhoApp({
           )}
         </div>
       </div>
-      {fim && <div className={c.direita}>{fim}</div>}
+      {(conexao || fim) && (
+        <div className={c.direita}>
+          {conexao && <IndicadorConexao />}
+          {fim}
+        </div>
+      )}
     </header>
   );
 }
