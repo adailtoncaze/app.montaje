@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
+  CalendarDays,
   Check,
   ChevronDown,
   House,
@@ -12,6 +13,7 @@ import {
   Monitor,
   Moon,
   Sun,
+  UsersRound,
   X,
 } from 'lucide-react';
 import { ROTULO_PAPEL } from '@montaje/core';
@@ -40,6 +42,8 @@ interface ItemNavegacao {
 interface GrupoNavegacao {
   rotulo: string;
   itens: ItemNavegacao[];
+  /** Grupos de cadastro: restritos ao papel administrador. */
+  restrito?: boolean;
 }
 
 /**
@@ -52,6 +56,14 @@ const NAVEGACAO: GrupoNavegacao[] = [
     itens: [
       { to: '/', rotulo: 'Início', icone: House, exato: true },
       { to: '/locais', rotulo: 'Locais de votação', icone: MapPin, exato: false },
+    ],
+  },
+  {
+    rotulo: 'Gestão',
+    restrito: true,
+    itens: [
+      { to: '/equipes', rotulo: 'Equipes', icone: UsersRound, exato: false },
+      { to: '/cronograma', rotulo: 'Cronograma', icone: CalendarDays, exato: false },
     ],
   },
 ];
@@ -80,6 +92,10 @@ function migalhasDaRota(pathname: string): ItemBreadcrumb[] {
         migalhas.push({ rotulo: 'Seção' });
       }
     }
+  } else if (segmentos[0] === 'equipes') {
+    migalhas.push({ rotulo: 'Equipes' });
+  } else if (segmentos[0] === 'cronograma') {
+    migalhas.push({ rotulo: 'Cronograma' });
   }
 
   return migalhas;
@@ -191,7 +207,9 @@ function ConteudoLateral({ onFechar }: { onFechar?: () => void }) {
       </div>
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-3" aria-label="Navegação principal">
-        {NAVEGACAO.map((grupo) => (
+        {NAVEGACAO.filter(
+          (grupo) => !grupo.restrito || perfil?.papel === 'administrador',
+        ).map((grupo) => (
           <div key={grupo.rotulo} className="flex flex-col gap-1">
             <span className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               {grupo.rotulo}

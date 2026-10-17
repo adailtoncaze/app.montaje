@@ -18,3 +18,22 @@ export function supabase(): SupabaseClient {
   });
   return cliente;
 }
+
+/**
+ * Cliente descartável (sem persistência) para operações de autenticação que
+ * criam uma nova conta — como cadastrar um membro da equipe. Usa uma chave de
+ * storage própria para nunca sobrescrever a sessão do painel.
+ */
+export function supabaseDescartavel(storageKey = 'montaje.cartorio.temporario'): SupabaseClient {
+  if (!url || !anon) {
+    throw new Error('Supabase nao configurado. Preencha o arquivo .env.');
+  }
+  return createClient(url, anon, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey,
+    },
+  });
+}

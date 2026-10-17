@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   CircleCheck,
   MapPin,
+  Plus,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -41,6 +42,8 @@ import { Progresso } from '@/components/progress-bar';
 import { useAvisoErro } from '@/lib/avisos';
 import { useLocais, type LocalComSecoes } from '@/lib/dados';
 import { classeAcento, ROTULO_SITUACAO, tomSituacao } from '@/lib/status-ui';
+import { DialogoNovoLocal } from '@/features/locais/DialogosCadastro';
+import { useSessao } from '@/features/auth/store';
 import { cn } from '@/lib/utils';
 
 type Filtro = 'todas' | 'aguardando' | 'correcao' | 'nao_conformes' | 'concluidos';
@@ -147,9 +150,11 @@ function EsqueletoGrade() {
 export function Locais() {
   const { data, isLoading, error, refetch, isFetching } = useLocais();
   useAvisoErro(error);
+  const podeCadastrar = useSessao((s) => s.perfil?.papel) === 'administrador';
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const [soNaoConformes, setSoNaoConformes] = useState(false);
+  const [novoLocal, setNovoLocal] = useState(false);
 
   const locais = data ?? [];
 
@@ -196,20 +201,28 @@ export function Locais() {
         titulo="Locais de votação"
         descricao="O trabalho é acompanhado por local. Abra um local para ver as seções e validar as evidências."
         acoes={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                onClick={() => void refetch()}
-                disabled={isFetching}
-                aria-label="Atualizar lista de locais"
-              >
-                <RefreshCw className={cn(isFetching && 'animate-spin')} />
-                Atualizar
+          <>
+            {podeCadastrar && (
+              <Button onClick={() => setNovoLocal(true)}>
+                <Plus />
+                Novo local
               </Button>
-            </TooltipTrigger>
-            <TooltipContent>Recarregar os dados do servidor</TooltipContent>
-          </Tooltip>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={() => void refetch()}
+                  disabled={isFetching}
+                  aria-label="Atualizar lista de locais"
+                >
+                  <RefreshCw className={cn(isFetching && 'animate-spin')} />
+                  Atualizar
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Recarregar os dados do servidor</TooltipContent>
+            </Tooltip>
+          </>
         }
       />
 
@@ -320,7 +333,14 @@ export function Locais() {
               : 'Ajuste a busca ou os filtros.'
           }
           acao={
-            locais.length > 0 && filtrosAtivos ? (
+            locais.length === 0 ? (
+              podeCadastrar ? (
+                <Button onClick={() => setNovoLocal(true)}>
+                  <Plus />
+                  Novo local
+                </Button>
+              ) : undefined
+            ) : filtrosAtivos ? (
               <Button variant="outline" onClick={limparFiltros}>
                 Limpar filtros
               </Button>
@@ -336,6 +356,8 @@ export function Locais() {
           ))}
         </div>
       )}
+
+      <DialogoNovoLocal aberto={novoLocal} onFechar={() => setNovoLocal(false)} />
     </div>
   );
 }

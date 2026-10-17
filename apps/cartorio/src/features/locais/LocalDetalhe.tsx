@@ -4,6 +4,7 @@ import {
   CircleCheck,
   Clock,
   ClipboardList,
+  Plus,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -43,6 +44,8 @@ import { StatCard } from '@/components/stat-card';
 import { ROTULO_STATUS_ETAPA, type StatusEtapa } from '@montaje/core';
 import { useAvisoErro } from '@/lib/avisos';
 import { useLocais, type SecaoResumo } from '@/lib/dados';
+import { DialogoNovaSecao } from '@/features/locais/DialogosCadastro';
+import { useSessao } from '@/features/auth/store';
 import {
   classeAcento,
   ROTULO_SITUACAO,
@@ -138,10 +141,12 @@ export function LocalDetalhe() {
   const { localId = '' } = useParams();
   const { data, isLoading, error, refetch, isFetching } = useLocais();
   useAvisoErro(error);
+  const podeCadastrar = useSessao((s) => s.perfil?.papel) === 'administrador';
 
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<StatusEtapa | 'todas'>('todas');
   const [soNaoConformes, setSoNaoConformes] = useState(false);
+  const [novaSecao, setNovaSecao] = useState(false);
 
   const local = useMemo(() => data?.find((l) => l.id === localId), [data, localId]);
 
@@ -199,6 +204,12 @@ export function LocalDetalhe() {
         }
         acoes={
           <>
+            {podeCadastrar && (
+              <Button onClick={() => setNovaSecao(true)}>
+                <Plus />
+                Nova seção
+              </Button>
+            )}
             <Badge variant={tomSituacao(local.situacao)}>{ROTULO_SITUACAO[local.situacao]}</Badge>
             <Badge variant="secondary">{local.totalSecoes} seção(ões)</Badge>
             {local.naoConformes > 0 && (
@@ -358,11 +369,18 @@ export function LocalDetalhe() {
           }
           descricao={
             local.totalSecoes === 0
-              ? 'As seções são criadas quando o cronograma do local é montado.'
+              ? 'Cadastre as seções do local. O checklist é gerado quando o local entra no cronograma.'
               : 'Ajuste a busca ou os filtros.'
           }
           acao={
-            local.totalSecoes > 0 && filtrosAtivos ? (
+            local.totalSecoes === 0 ? (
+              podeCadastrar ? (
+                <Button onClick={() => setNovaSecao(true)}>
+                  <Plus />
+                  Nova seção
+                </Button>
+              ) : undefined
+            ) : filtrosAtivos ? (
               <Button variant="outline" onClick={limparFiltros}>
                 Limpar filtros
               </Button>
@@ -376,6 +394,12 @@ export function LocalDetalhe() {
           ))}
         </div>
       )}
+
+      <DialogoNovaSecao
+        localId={local.id}
+        aberto={novaSecao}
+        onFechar={() => setNovaSecao(false)}
+      />
     </div>
   );
 }
