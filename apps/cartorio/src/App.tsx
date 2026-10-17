@@ -7,6 +7,7 @@ import { ROTULO_PAPEL } from '@montaje/core';
 import { useSessao } from '@/features/auth/store';
 import { Login } from '@/features/auth/Login';
 import { Secoes } from '@/features/secoes/Secoes';
+import { SecaoDetalhe } from '@/features/secoes/SecaoDetalhe';
 import { Layout } from '@/app/Layout';
 
 const useClasses = makeStyles({
@@ -94,6 +95,7 @@ export function App() {
       >
         <Route path="/" element={<Inicio />} />
         <Route path="/secoes" element={<Secoes />} />
+        <Route path="/secoes/:secaoId" element={<SecaoDetalhe />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
