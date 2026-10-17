@@ -127,9 +127,20 @@ export function Sincronizacao() {
             titulo={resultado.falhas > 0 ? 'Envio parcial' : 'Envio concluído'}
           >
             <Text size={200}>
-              {resultado.enviados} enviado(s) · {resultado.falhas} falha(s) ·{' '}
-              {resultado.restantes} na fila
+              {resultado.enviados} enviado(s) · {resultado.falhas} falha(s) · {resultado.restantes}{' '}
+              na fila
             </Text>
+            {resultado.atualizadas > 0 && (
+              <Text size={200} block>
+                {resultado.atualizadas} seção(ões) atualizada(s) pelo cartório.
+              </Text>
+            )}
+          </Aviso>
+        )}
+
+        {resultado?.avisoDescida && (
+          <Aviso tom="alerta" titulo="Status do cartório">
+            {resultado.avisoDescida}
           </Aviso>
         )}
 

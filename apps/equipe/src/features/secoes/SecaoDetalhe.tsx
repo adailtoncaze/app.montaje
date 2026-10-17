@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ROTULO_STATUS_ETAPA,
@@ -7,7 +8,11 @@ import {
   type Etapa,
 } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
-import { ArrowLeft24Regular, LockClosed24Regular } from '@fluentui/react-icons';
+import {
+  ArrowLeft24Regular,
+  ArrowSync24Regular,
+  LockClosed24Regular,
+} from '@fluentui/react-icons';
 import {
   Aviso,
   Botao,
@@ -20,6 +25,7 @@ import {
 } from '@montaje/ui';
 import { db } from '@/db/schema';
 import { tomStatusEtapa } from '@/lib/status-ui';
+import { baixarAlteracoes } from '@/features/sync/download';
 
 const useClasses = makeStyles({
   pagina: {
@@ -123,8 +129,32 @@ export function SecaoDetalhe() {
     [secaoId],
     [],
   );
+  const validacoes = useLiveQuery(
+    () => db.validacoes.where('secao_id').equals(secaoId).toArray(),
+    [secaoId],
+    [],
+  );
+  const [verificando, setVerificando] = useState(false);
+  const [avisoCheck, setAvisoCheck] = useState<string | null>(null);
 
   const voltar = `/locais/${localId}`;
+
+  async function verificarCartorio() {
+    setAvisoCheck(null);
+    setVerificando(true);
+    try {
+      const n = await baixarAlteracoes();
+      setAvisoCheck(
+        n > 0
+          ? 'Status atualizado pelo cartório.'
+          : 'Nenhuma novidade do cartório até agora.',
+      );
+    } catch {
+      setAvisoCheck('Não foi possível verificar agora. Confira a conexão e tente de novo.');
+    } finally {
+      setVerificando(false);
+    }
+  }
 
   if (!secao) {
     return (
@@ -157,6 +187,20 @@ export function SecaoDetalhe() {
   const e1 = conta(1);
   const e2 = conta(2);
 
+  // Última devolução do cartório por etapa (motivo da correção a ser feita em campo).
+  // Só aparece enquanto a etapa está realmente devolvida — some ao reenviar/aprovar.
+  const correcaoDe = (etapa: Etapa) =>
+    validacoes
+      .filter((v) => v.etapa === etapa && v.status === 'correcao_solicitada')
+      .sort((a, b) => (a.data < b.data ? 1 : -1))[0];
+  const statusDaEtapa = (etapa: Etapa) =>
+    etapa === 1 ? secao.status_etapa1 : secao.status_etapa2;
+  const correcao1 =
+    statusDaEtapa(1) === 'correcao_solicitada' ? correcaoDe(1) : undefined;
+  const correcao2 =
+    statusDaEtapa(2) === 'correcao_solicitada' ? correcaoDe(2) : undefined;
+  const nomeItem = (id: string | null) => itens.find((i) => i.id === id)?.nome ?? null;
+
   return (
     <>
       <CabecalhoApp
@@ -174,6 +218,51 @@ export function SecaoDetalhe() {
           <Aviso tom="alerta" titulo="Seção não conforme no sigilo do voto">
             Esta seção foi marcada como não conforme. O cartório precisa tratar antes da
             votação.
+          </Aviso>
+        )}
+
+        {[
+          { etapa: 1 as Etapa, correcao: correcao1 },
+          { etapa: 2 as Etapa, correcao: correcao2 },
+        ].map(({ etapa, correcao }) =>
+          correcao ? (
+            <Aviso
+              key={etapa}
+              tom="erro"
+              titulo={`Etapa ${etapa} devolvida para correção`}
+            >
+              {nomeItem(correcao.item_devolvido) && (
+                <Text size={200} weight="semibold" block>
+                  Item: {nomeItem(correcao.item_devolvido)}
+                </Text>
+              )}
+              {correcao.comentario && (
+                <Text size={200} block>
+                  {correcao.comentario}
+                </Text>
+              )}
+              <Text size={200} block>
+                Corrija e envie novamente pela Etapa {etapa}. A equipe ainda está no local.
+              </Text>
+            </Aviso>
+          ) : null,
+        )}
+
+        <div className={c.acao}>
+          <Botao
+            variante="secundario"
+            icon={<ArrowSync24Regular />}
+            carregando={verificando}
+            disabled={verificando}
+            onClick={verificarCartorio}
+          >
+            Verificar status no cartório
+          </Botao>
+        </div>
+
+        {avisoCheck && (
+          <Aviso tom="info" titulo="Cartório">
+            {avisoCheck}
           </Aviso>
         )}
 

@@ -216,3 +216,72 @@ export async function ultimaSincronizacao(): Promise<string | null> {
   const meta = await db.meta.get('ultima_sincronizacao');
   return (meta?.valor as string) ?? null;
 }
+
+/**
+ * APP-24 (descida) — Atualiza no aparelho apenas o que o cartório pode alterar:
+ * o status das etapas e as validações (aprovação/devolução) das seções da equipe.
+ *
+ * É leve o bastante para rodar sozinho: ao abrir o app, ao voltar online, ao
+ * focar a janela e a cada ciclo do motor de sincronizacao. Assim, quando o
+ * cartório aprova a Etapa 1, a Etapa 2 libera sem precisar de "Baixar dados do dia";
+ * e quando pede correção, a equipe (ainda no local) recebe o motivo na hora.
+ */
+export async function baixarAlteracoes(): Promise<number> {
+  const sb = supabase();
+
+  const cronograma = await db.cronograma.toArray();
+  const localIds = unicos(cronograma.map((c) => c.local_id));
+  if (localIds.length === 0) return 0;
+
+  const { data: secoes, error } = await sb
+    .from('secoes')
+    .select('*')
+    .in('local_id', localIds)
+    .returns<Secao[]>();
+  if (error) throw error;
+
+  const secaoIds = secoes.map((s) => s.id);
+  let validacoes: Validacao[] = [];
+  if (secaoIds.length > 0) {
+    const { data, error: errValid } = await sb
+      .from('validacoes')
+      .select('*')
+      .in('secao_id', secaoIds)
+      .returns<Validacao[]>();
+    if (errValid) throw errValid;
+    validacoes = data ?? [];
+  }
+
+  let alteradas = 0;
+  await db.transaction('rw', [db.secoes, db.validacoes, db.meta], async () => {
+    for (const secao of secoes) {
+      const local = await db.secoes.get(secao.id);
+      // Nunca sobrescreve uma secao com alteracao local ainda nao enviada.
+      if (local && (local.syncState === 'pendente_envio' || local.syncState === 'erro')) {
+        continue;
+      }
+      const semMudanca =
+        local &&
+        local.syncState === 'enviado' &&
+        local.status_etapa1 === secao.status_etapa1 &&
+        local.status_etapa2 === secao.status_etapa2 &&
+        local.conforme === secao.conforme;
+      if (semMudanca) continue;
+
+      await db.secoes.put({ ...secao, syncState: 'enviado' });
+      alteradas += 1;
+    }
+
+    if (validacoes.length > 0) {
+      await db.validacoes.bulkPut(validacoes);
+    }
+
+    await db.meta.put({
+      chave: 'ultima_sincronizacao',
+      valor: new Date().toISOString(),
+      atualizadoEm: Date.now(),
+    });
+  });
+
+  return alteradas;
+}

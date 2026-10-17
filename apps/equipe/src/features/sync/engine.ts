@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Etapa, StatusEtapa } from '@montaje/core';
 import { supabase, supabaseConfigurado } from '@/lib/supabase';
 import { db, type OutboxItem } from '@/db/schema';
+import { baixarAlteracoes } from './download';
 
 /**
  * APP-24 — Sync Engine (outbox -> Supabase).
@@ -19,10 +20,14 @@ export interface ResultadoSync {
   falhas: number;
   /** Quantas continuam na fila (pendentes + erro) ao final do ciclo. */
   restantes: number;
+  /** Quantas seções tiveram status/conformidade atualizados a partir do cartório. */
+  atualizadas: number;
   /** `false` quando o ciclo nem rodou (offline, sem sessao, ja em andamento). */
   executou: boolean;
   /** Motivo, quando `executou` for `false`. */
   mensagem?: string;
+  /** Aviso quando o envio concluiu mas a descida (status do cartório) falhou. */
+  avisoDescida?: string;
 }
 
 /** Ordem de envio dentro de um ciclo (status por ultimo: sobe a secao ja completa). */
@@ -53,6 +58,7 @@ export async function sincronizarTudo(): Promise<ResultadoSync> {
       enviados: 0,
       falhas: 0,
       restantes: restantesAntes,
+      atualizadas: 0,
       executou: false,
       mensagem: 'Sincronização já em andamento.',
     };
@@ -62,6 +68,7 @@ export async function sincronizarTudo(): Promise<ResultadoSync> {
       enviados: 0,
       falhas: 0,
       restantes: restantesAntes,
+      atualizadas: 0,
       executou: false,
       mensagem: 'Sem conexão com a internet.',
     };
@@ -71,6 +78,7 @@ export async function sincronizarTudo(): Promise<ResultadoSync> {
       enviados: 0,
       falhas: 0,
       restantes: restantesAntes,
+      atualizadas: 0,
       executou: false,
       mensagem: 'Supabase não configurado.',
     };
@@ -83,6 +91,7 @@ export async function sincronizarTudo(): Promise<ResultadoSync> {
       enviados: 0,
       falhas: 0,
       restantes: restantesAntes,
+      atualizadas: 0,
       executou: false,
       mensagem: 'Sessão não encontrada. Entre novamente.',
     };
@@ -91,6 +100,8 @@ export async function sincronizarTudo(): Promise<ResultadoSync> {
   rodando = true;
   let enviados = 0;
   let falhas = 0;
+  let atualizadas = 0;
+  let avisoDescida: string | undefined;
   try {
     const fila = (
       await db.outbox.where('estado').anyOf('pendente_envio', 'erro').toArray()
@@ -117,11 +128,27 @@ export async function sincronizarTudo(): Promise<ResultadoSync> {
         falhas += 1;
       }
     }
+
+    // Descida: aplica no aparelho aprovacoes/devolucoes feitas pelo cartorio,
+    // para a Etapa 2 liberar (ou a correcao aparecer) sem "Baixar dados do dia".
+    try {
+      atualizadas = await baixarAlteracoes();
+    } catch (causa) {
+      console.error('[sync] falha ao baixar alteracoes do cartorio', causa);
+      avisoDescida = 'Envio concluído, mas não foi possível verificar novidades do cartório.';
+    }
   } finally {
     rodando = false;
   }
 
-  return { enviados, falhas, restantes: await contarPendentes(), executou: true };
+  return {
+    enviados,
+    falhas,
+    atualizadas,
+    avisoDescida,
+    restantes: await contarPendentes(),
+    executou: true,
+  };
 }
 
 async function enviarEntrada(sb: SupabaseClient, entrada: OutboxItem): Promise<void> {
