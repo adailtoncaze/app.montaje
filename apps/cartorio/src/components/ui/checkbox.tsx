@@ -1,11 +1,16 @@
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
 import { Check } from 'lucide-react';
-import type { ComponentProps } from 'react';
+import { forwardRef, type ComponentPropsWithoutRef, type ElementRef } from 'react';
 import { cn } from '@/lib/utils';
 
-export function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxPrimitive.Root>) {
+/** Caixa de seleção no estilo shadcn/ui (forwardRef para o react-hook-form). */
+export const Checkbox = forwardRef<
+  ElementRef<typeof CheckboxPrimitive.Root>,
+  ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
+>(function Checkbox({ className, ...props }, ref) {
   return (
     <CheckboxPrimitive.Root
+      ref={ref}
       className={cn(
         'peer size-4 shrink-0 rounded-sm border border-input bg-card transition-colors',
         'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
@@ -19,4 +24,4 @@ export function Checkbox({ className, ...props }: ComponentProps<typeof Checkbox
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );
-}
+});
