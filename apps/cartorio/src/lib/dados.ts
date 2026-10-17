@@ -9,6 +9,7 @@ import type {
   ValidacaoInput,
 } from '@montaje/core';
 import { supabase } from './supabase';
+import { piorSituacao, prioridadeSituacao, situacaoSecao, type SituacaoSecao } from './status-ui';
 
 /**
  * Camada de acesso a dados do painel do cartório.
@@ -22,6 +23,7 @@ export interface LocalResumo {
   id: string;
   zona: number;
   nome: string;
+  endereco: string | null;
 }
 
 export type SecaoComLocal = Secao & { local: LocalResumo | null };
@@ -29,7 +31,7 @@ export type SecaoComLocal = Secao & { local: LocalResumo | null };
 export interface SecaoResumo extends SecaoComLocal {
   /** Total de itens das duas etapas. */
   totalItens: number;
-  /** Itens da Etapa 1 já respondidos (status <> pendente). */
+  /** Itens já respondidos nas duas etapas (status <> pendente). */
   itensConcluidos: number;
   /**Quantidade de evidências (fotos) da seção. */
   fotos: number;
@@ -84,7 +86,6 @@ async function buscarTudo<T>(
 interface ItemResumo {
   id: string;
   secao_id: string;
-  etapa: number;
   status: string;
 }
 
@@ -94,13 +95,13 @@ export async function listarSecoes(): Promise<SecaoResumo[]> {
   const [secoesRes, itens, evidencias] = await Promise.all([
     sb
       .from('secoes')
-      .select('*, local:locais(id, zona, nome)')
+      .select('*, local:locais(id, zona, nome, endereco)')
       .order('numero')
       .returns<SecaoComLocal[]>(),
     buscarTudo<ItemResumo>((de, ate) =>
       sb
         .from('itens_checklist')
-        .select('id, secao_id, etapa, status')
+        .select('id, secao_id, status')
         .order('id')
         .range(de, ate)
         .returns<ItemResumo[]>(),
@@ -121,7 +122,7 @@ export async function listarSecoes(): Promise<SecaoResumo[]> {
   for (const item of itens) {
     secaoDoItem.set(item.id, item.secao_id);
     total.set(item.secao_id, (total.get(item.secao_id) ?? 0) + 1);
-    if (item.etapa === 1 && item.status !== 'pendente') {
+    if (item.status !== 'pendente') {
       concluidos.set(item.secao_id, (concluidos.get(item.secao_id) ?? 0) + 1);
     }
   }
@@ -140,12 +141,99 @@ export async function listarSecoes(): Promise<SecaoResumo[]> {
   }));
 }
 
+// ------------------------------------------------------------------ agregação
+
+/** Um local de votação com suas seções e os totais que o cartório acompanha. */
+export interface LocalComSecoes {
+  id: string;
+  zona: number;
+  nome: string;
+  endereco: string | null;
+  secoes: SecaoResumo[];
+  totalSecoes: number;
+  /** Seções com alguma etapa enviada e aguardando decisão do cartório. */
+  aguardando: number;
+  /** Seções devolvidas para correção pela equipe. */
+  correcoes: number;
+  /** Seções com sigilo do voto não conforme. */
+  naoConformes: number;
+  /** Seções com as duas etapas aprovadas. */
+  concluidas: number;
+  fotos: number;
+  /** Situação que resume o local (a mais urgente entre as seções). */
+  situacao: SituacaoSecao;
+  /** Total de itens das duas etapas (denominador do progresso). */
+  totalItens: number;
+  itensConcluidos: number;
+}
+
+/**
+ * Agrupa as seções por local de votação. O painel lista e navega sempre por
+ * local (unidade de trabalho da equipe), e só então desce para as seções.
+ */
+export function agruparPorLocal(secoes: SecaoResumo[]): LocalComSecoes[] {
+  const mapa = new Map<string, LocalComSecoes>();
+
+  for (const secao of secoes) {
+    const chave = secao.local?.id ?? 'sem-local';
+    let grupo = mapa.get(chave);
+    if (!grupo) {
+      grupo = {
+        id: secao.local?.id ?? 'sem-local',
+        zona: secao.local?.zona ?? 0,
+        nome: secao.local?.nome ?? 'Local não identificado',
+        endereco: secao.local?.endereco ?? null,
+        secoes: [],
+        totalSecoes: 0,
+        aguardando: 0,
+        correcoes: 0,
+        naoConformes: 0,
+        concluidas: 0,
+        fotos: 0,
+        situacao: 'concluida',
+        totalItens: 0,
+        itensConcluidos: 0,
+      };
+      mapa.set(chave, grupo);
+    }
+
+    grupo.secoes.push(secao);
+    grupo.totalSecoes += 1;
+    grupo.fotos += secao.fotos;
+    grupo.totalItens += secao.totalItens;
+    grupo.itensConcluidos += secao.itensConcluidos;
+
+    const situacao = situacaoSecao(secao);
+    if (situacao === 'aguardando') grupo.aguardando += 1;
+    else if (situacao === 'correcao') grupo.correcoes += 1;
+    else if (situacao === 'concluida') grupo.concluidas += 1;
+
+    if (!secao.conforme) grupo.naoConformes += 1;
+    grupo.situacao = piorSituacao(grupo.situacao, situacao);
+  }
+
+  for (const grupo of mapa.values()) {
+    grupo.secoes.sort(
+      (a, b) =>
+        prioridadeSituacao(situacaoSecao(a)) - prioridadeSituacao(situacaoSecao(b)) ||
+        a.numero - b.numero,
+    );
+  }
+
+  return [...mapa.values()].sort(
+    (a, b) =>
+      prioridadeSituacao(a.situacao) - prioridadeSituacao(b.situacao) ||
+      a.zona - b.zona ||
+      a.nome.localeCompare(b.nome, 'pt-BR'),
+  );
+}
+
 export async function obterSecao(secaoId: string): Promise<SecaoDetalhe> {
   const sb = supabase();
 
   const { data, error } = await sb
     .from('secoes')
-    .select('*, local:locais(id, zona, nome)')
+    .select('*, local:locais(id, zona, nome, endereco)')
     .eq('id', secaoId)
     .single();
   if (error) throw new Error(error.message);
@@ -286,6 +374,15 @@ export async function validarSecao(
 
 export function useSecoes() {
   return useQuery({ queryKey: ['secoes'], queryFn: listarSecoes });
+}
+
+/** Locais de votação com as seções agregadas (mesma consulta de `useSecoes`). */
+export function useLocais() {
+  return useQuery({
+    queryKey: ['secoes'],
+    queryFn: listarSecoes,
+    select: agruparPorLocal,
+  });
 }
 
 export function useSecao(secaoId: string) {

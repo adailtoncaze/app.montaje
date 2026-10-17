@@ -1,8 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Text, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
 import {
-  ClipboardTaskListLtr24Regular,
   Home24Regular,
+  Location24Regular,
   SignOut24Regular,
 } from '@fluentui/react-icons';
 import { Botao, CabecalhoApp } from '@montaje/ui';
@@ -85,11 +85,11 @@ export function Layout() {
           Início
         </NavLink>
         <NavLink
-          to="/secoes"
+          to="/locais"
           className={({ isActive }) => mergeClasses(c.link, isActive && c.ativo)}
         >
-          <ClipboardTaskListLtr24Regular />
-          Seções
+          <Location24Regular />
+          Locais de votação
         </NavLink>
 
         <span className={c.espaco} />

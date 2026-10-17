@@ -274,8 +274,8 @@ function PainelValidacao({
     <Cartao titulo={`Validação da Etapa ${etapa}`}>
       <div className={c.formulario}>
         <Text size={200} className={c.rotulo}>
-          Revise as evidências acima antes de decidir. A aprovação libera a próxima etapa
-          para a equipe.
+          Revise as evidências desta etapa antes de decidir. A aprovação libera a próxima
+          etapa para a equipe.
         </Text>
 
         {erro && <Aviso tom="erro">{erro}</Aviso>}
@@ -379,7 +379,7 @@ function Historico({ validacoes, itens }: { validacoes: ValidacaoComAutor[]; ite
 
 export function SecaoDetalhe() {
   const c = useClasses();
-  const { secaoId = '' } = useParams();
+  const { localId = '', secaoId = '' } = useParams();
   const perfil = useSessao((s) => s.perfil);
   const queryClient = useQueryClient();
   const [etapa, setEtapa] = useState<Etapa>(1);
@@ -391,8 +391,8 @@ export function SecaoDetalhe() {
   if (error || !data) {
     return (
       <div className={c.pagina}>
-        <Link to="/secoes" className={c.voltar}>
-          <ArrowLeft24Regular /> Voltar
+        <Link to={`/locais/${localId}`} className={c.voltar}>
+          <ArrowLeft24Regular /> Voltar ao local
         </Link>
         <Aviso tom="erro" titulo="Não foi possível carregar a seção">
           {error instanceof Error ? error.message : 'Seção não encontrada.'}
@@ -415,8 +415,8 @@ export function SecaoDetalhe() {
 
   return (
     <div className={c.pagina}>
-      <Link to="/secoes" className={c.voltar}>
-        <ArrowLeft24Regular /> Voltar às seções
+      <Link to={`/locais/${localId}`} className={c.voltar}>
+        <ArrowLeft24Regular /> Voltar ao local
       </Link>
 
       <div className={c.cabecalho}>
@@ -458,6 +458,18 @@ export function SecaoDetalhe() {
         <Tab value="2">Etapa 2 · Sigilo do voto</Tab>
       </TabList>
 
+      {perfil && (
+        <PainelValidacao
+          detalhe={data}
+          etapa={etapa}
+          status={statusEtapa}
+          conforme={secao.conforme}
+          validadorId={perfil.id}
+          ultima={ultimaDaEtapa}
+          onValidado={recarregar}
+        />
+      )}
+
       {itensEtapa.length === 0 ? (
         <EstadoVazio
           titulo="Nenhum item nesta etapa"
@@ -487,18 +499,6 @@ export function SecaoDetalhe() {
             ))}
           </div>
         </Cartao>
-      )}
-
-      {perfil && (
-        <PainelValidacao
-          detalhe={data}
-          etapa={etapa}
-          status={statusEtapa}
-          conforme={secao.conforme}
-          validadorId={perfil.id}
-          ultima={ultimaDaEtapa}
-          onValidado={recarregar}
-        />
       )}
 
       <Historico validacoes={validacoes} itens={itens} />
