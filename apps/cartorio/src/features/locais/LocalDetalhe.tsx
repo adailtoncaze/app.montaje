@@ -1,26 +1,30 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Search, TriangleAlert } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import {
-  Checkbox,
-  Dropdown,
-  Option,
-  Spinner,
-  Text,
-  Title3,
-  makeStyles,
-  tokens,
-} from '@fluentui/react-components';
-import { ArrowLeft24Regular, Warning24Regular } from '@fluentui/react-icons';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-  Aviso,
-  BarraProgresso,
-  Campo,
-  Cartao,
-  EstadoVazio,
-  Medalhao,
-  Selo,
-  pontoTablet,
-} from '@montaje/ui';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { Medalhao } from '@/components/medalhao';
+import { Progresso } from '@/components/progress-bar';
+import { StatCard } from '@/components/stat-card';
 import { ROTULO_STATUS_ETAPA, type StatusEtapa } from '@montaje/core';
 import { useLocais, type SecaoResumo } from '@/lib/dados';
 import {
@@ -38,139 +42,53 @@ const STATUS: StatusEtapa[] = [
   'correcao_solicitada',
 ];
 
-const useClasses = makeStyles({
-  pagina: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalL,
-  },
-  voltar: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalXS,
-    color: tokens.colorBrandForegroundLink,
-    textDecorationLine: 'none',
-    width: 'fit-content',
-  },
-  cabecalho: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-  },
-  rotulo: {
-    color: tokens.colorNeutralForeground3,
-  },
-  selos: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: tokens.spacingHorizontalS,
-    marginTop: tokens.spacingVerticalXS,
-  },
-  resumo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-    gap: tokens.spacingHorizontalM,
-  },
-  contador: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-    padding: tokens.spacingVerticalM,
-  },
-  numero: {
-    fontSize: '24px',
-    lineHeight: '28px',
-    fontWeight: tokens.fontWeightBold,
-  },
-  destaque: {
-    color: tokens.colorBrandForeground1,
-  },
-  alerta: {
-    color: tokens.colorPaletteRedForeground1,
-  },
-  filtros: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: tokens.spacingHorizontalM,
-    alignItems: 'end',
-    [`@media ${pontoTablet}`]: {
-      gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) auto',
-    },
-  },
-  lista: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: tokens.spacingVerticalM,
-    [`@media ${pontoTablet}`]: {
-      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-      gap: tokens.spacingHorizontalL,
-    },
-  },
-  conteudo: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalS,
-  },
-  meta: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-  },
-  naoConforme: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalXS,
-    color: tokens.colorPaletteRedForeground1,
-  },
-});
-
 function CartaoSecao({ secao }: { secao: SecaoResumo }) {
-  const c = useClasses();
   const situacao = situacaoSecao(secao);
   const naoConforme = !secao.conforme;
 
   return (
-    <Link to={`/locais/${secao.local_id}/secoes/${secao.id}`} style={{ textDecorationLine: 'none', color: 'inherit' }}>
-      <Cartao
-        clicavel
-        inicio={<Medalhao tom={tomSituacao(situacao)}>{secao.numero}</Medalhao>}
-        titulo={`Seção ${secao.numero}`}
-        descricao={`${secao.itensConcluidos}/${secao.totalItens} itens · ${secao.fotos} foto(s)`}
-        acao={<Selo texto={ROTULO_SITUACAO[situacao]} tom={tomSituacao(situacao)} />}
-      >
-        <div className={c.conteudo}>
-          <div className={c.meta}>
-            <Selo
-              texto={`E1: ${ROTULO_STATUS_ETAPA[secao.status_etapa1]}`}
-              tom={tomStatusEtapa(secao.status_etapa1)}
-            />
-            <Selo
-              texto={`E2: ${ROTULO_STATUS_ETAPA[secao.status_etapa2]}`}
-              tom={tomStatusEtapa(secao.status_etapa2)}
-            />
+    <Link to={`/locais/${secao.local_id}/secoes/${secao.id}`} className="block h-full">
+      <Card className="h-full transition-shadow hover:shadow-teams-8">
+        <CardHeader>
+          <div className="flex min-w-0 items-start gap-3">
+            <Medalhao tom={tomSituacao(situacao)}>{secao.numero}</Medalhao>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <CardTitle>Seção {secao.numero}</CardTitle>
+              <CardDescription>
+                {secao.itensConcluidos}/{secao.totalItens} itens · {secao.fotos} foto(s)
+              </CardDescription>
+            </div>
+          </div>
+          <Badge variant={tomSituacao(situacao)}>{ROTULO_SITUACAO[situacao]}</Badge>
+        </CardHeader>
+
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={tomStatusEtapa(secao.status_etapa1)}>
+              E1: {ROTULO_STATUS_ETAPA[secao.status_etapa1]}
+            </Badge>
+            <Badge variant={tomStatusEtapa(secao.status_etapa2)}>
+              E2: {ROTULO_STATUS_ETAPA[secao.status_etapa2]}
+            </Badge>
           </div>
 
           {naoConforme && (
-            <span className={c.naoConforme}>
-              <Warning24Regular />
-              <Text size={200} weight="semibold">
-                Sigilo do voto não conforme
-              </Text>
-            </span>
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
+              <TriangleAlert className="size-3.5" />
+              Sigilo do voto não conforme
+            </p>
           )}
 
           {secao.totalItens > 0 && (
-            <BarraProgresso concluidos={secao.itensConcluidos} total={secao.totalItens} />
+            <Progresso concluidos={secao.itensConcluidos} total={secao.totalItens} />
           )}
-        </div>
-      </Cartao>
+        </CardContent>
+      </Card>
     </Link>
   );
 }
 
 export function LocalDetalhe() {
-  const c = useClasses();
   const { localId = '' } = useParams();
   const { data, isLoading, error } = useLocais();
 
@@ -195,105 +113,114 @@ export function LocalDetalhe() {
 
   if (error || !local) {
     return (
-      <div className={c.pagina}>
-        <Link to="/locais" className={c.voltar}>
-          <ArrowLeft24Regular /> Voltar aos locais
+      <div className="flex flex-col gap-4">
+        <Link
+          to="/locais"
+          className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-primary-subtle-foreground hover:underline"
+        >
+          <ArrowLeft className="size-4" /> Voltar aos locais
         </Link>
-        <Aviso tom="erro" titulo="Não foi possível carregar o local">
-          {error instanceof Error ? error.message : 'Local não encontrado.'}
-        </Aviso>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <strong className="block">Não foi possível carregar o local</strong>
+            {error instanceof Error ? error.message : 'Local não encontrado.'}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div className={c.pagina}>
-      <Link to="/locais" className={c.voltar}>
-        <ArrowLeft24Regular /> Voltar aos locais
+    <div className="flex flex-col gap-6">
+      <Link
+        to="/locais"
+        className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-primary-subtle-foreground hover:underline"
+      >
+        <ArrowLeft className="size-4" /> Voltar aos locais
       </Link>
 
-      <div className={c.cabecalho}>
-        <Title3>{local.nome}</Title3>
-        <Text className={c.rotulo}>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold text-foreground">{local.nome}</h1>
+        <p className="text-sm text-muted-foreground">
           {local.zona}ª zona
           {local.endereco?.trim() ? ` · ${local.endereco}` : ''}
-        </Text>
-        <div className={c.selos}>
-          <Selo texto={ROTULO_SITUACAO[local.situacao]} tom={tomSituacao(local.situacao)} />
-          <Selo texto={`${local.totalSecoes} seção(ões)`} tom="neutro" />
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant={tomSituacao(local.situacao)}>{ROTULO_SITUACAO[local.situacao]}</Badge>
+          <Badge variant="secondary">{local.totalSecoes} seção(ões)</Badge>
           {local.naoConformes > 0 && (
-            <Selo texto={`${local.naoConformes} não conforme`} tom="erro" />
+            <Badge variant="danger">{local.naoConformes} não conforme</Badge>
           )}
         </div>
       </div>
 
       {local.naoConformes > 0 && (
-        <Aviso tom="erro" titulo="Sigilo do voto não conforme (eliminatório)">
-          Há seção(ões) com resposta de sigilo "Não". Elas não podem ser aprovadas antes da
-          correção, conforme a regra 1 do PRD.
-        </Aviso>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <strong className="block">Sigilo do voto não conforme (eliminatório)</strong>
+            Há seção(ões) com resposta de sigilo "Não". Elas não podem ser aprovadas antes da
+            correção, conforme a regra 1 do PRD.
+          </AlertDescription>
+        </Alert>
       )}
 
-      <div className={c.resumo}>
-        <Cartao clicavel={false} className={c.contador}>
-          <Text className={c.numero}>{local.totalSecoes}</Text>
-          <Text size={200}>Seções</Text>
-        </Cartao>
-        <Cartao clicavel={false} className={c.contador}>
-          <Text className={`${c.numero} ${local.aguardando > 0 ? c.destaque : ''}`}>
-            {local.aguardando}
-          </Text>
-          <Text size={200}>Aguardando validação</Text>
-        </Cartao>
-        <Cartao clicavel={false} className={c.contador}>
-          <Text className={`${c.numero} ${local.correcoes > 0 ? c.alerta : ''}`}>
-            {local.correcoes}
-          </Text>
-          <Text size={200}>Com correção</Text>
-        </Cartao>
-        <Cartao clicavel={false} className={c.contador}>
-          <Text className={c.numero}>{local.concluidas}</Text>
-          <Text size={200}>Concluídas</Text>
-        </Cartao>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard valor={local.totalSecoes} rotulo="Seções" />
+        <StatCard valor={local.aguardando} rotulo="Aguardando validação" tom={local.aguardando > 0 ? 'marca' : 'neutro'} />
+        <StatCard valor={local.correcoes} rotulo="Com correção" tom={local.correcoes > 0 ? 'erro' : 'neutro'} />
+        <StatCard valor={local.concluidas} rotulo="Concluídas" />
       </div>
 
-      <div className={c.filtros}>
-        <Campo
-          rotulo="Buscar seção"
-          placeholder="Número da seção"
-          inputMode="numeric"
-          value={busca}
-          onChange={(_, d) => setBusca(d.value)}
-        />
-        <Dropdown
-          aria-label="Filtrar por status da Etapa 1"
-          placeholder="Status da Etapa 1"
-          value={
-            filtroStatus === 'todas'
-              ? 'Todas as etapas'
-              : ROTULO_STATUS_ETAPA[filtroStatus]
-          }
-          selectedOptions={[filtroStatus]}
-          onOptionSelect={(_, d) =>
-            setFiltroStatus((d.optionValue as StatusEtapa | 'todas') ?? 'todas')
-          }
-        >
-          <Option value="todas">Todas as etapas</Option>
-          {STATUS.map((status) => (
-            <Option key={status} value={status}>
-              {ROTULO_STATUS_ETAPA[status]}
-            </Option>
-          ))}
-        </Dropdown>
-        <Checkbox
-          label="Só sigilo não conforme"
-          checked={soNaoConformes}
-          onChange={(_, d) => setSoNaoConformes(Boolean(d.checked))}
-        />
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] lg:items-end">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="busca-secao">Buscar seção</Label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="busca-secao"
+              className="pl-9"
+              inputMode="numeric"
+              placeholder="Número da seção"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="filtro-status">Status da Etapa 1</Label>
+          <Select
+            value={filtroStatus}
+            onValueChange={(v) => setFiltroStatus(v as StatusEtapa | 'todas')}
+          >
+            <SelectTrigger id="filtro-status" aria-label="Filtrar por status da Etapa 1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as etapas</SelectItem>
+              {STATUS.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {ROTULO_STATUS_ETAPA[status]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex h-9 items-center gap-2">
+          <Checkbox
+            id="secao-nao-conformes"
+            checked={soNaoConformes}
+            onCheckedChange={(v) => setSoNaoConformes(v === true)}
+          />
+          <Label htmlFor="secao-nao-conformes" className="font-medium">
+            Só sigilo não conforme
+          </Label>
+        </div>
       </div>
 
       {filtradas.length === 0 ? (
-        <EstadoVazio
+        <EmptyState
           titulo={
             local.totalSecoes === 0 ? 'Nenhuma seção neste local' : 'Nenhuma seção encontrada'
           }
@@ -304,7 +231,7 @@ export function LocalDetalhe() {
           }
         />
       ) : (
-        <div className={c.lista}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {filtradas.map((secao) => (
             <CartaoSecao key={secao.id} secao={secao} />
           ))}

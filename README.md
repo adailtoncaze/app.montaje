@@ -86,30 +86,30 @@ O `packages/core` é a **fonte única** das regras usadas pelo app e pelo painel
 status de etapa, sigilo eliminatório, caminhos do Storage e schemas de validação.
 Detalhes em [`docs/PLANO-sprint0-contrato.md`](docs/PLANO-sprint0-contrato.md).
 
-## Design system (Microsoft Teams / Fluent 2)
+## Design system (Microsoft Teams)
 
-O visual dos dois apps segue o **design system do Microsoft Teams**, implementado com o
-**Fluent UI React v9 (Fluent 2)** usando o tema oficial do Teams
-(`teamsLightTheme` / `teamsDarkTheme`).
+O visual dos dois apps segue as **cores do design system do Microsoft Teams** (tema claro), com a cor
+de marca roxa **`#5B5FC7`** aplicada no `theme-color`, no painel e no ícone/manifesto do app da equipe.
+Cada app usa sua própria stack de UI:
 
-- `packages/ui` expõe o provedor de tema e os componentes reutilizáveis:
-  - `ProvedorMontaje` — `FluentProvider` com o tema do Teams (claro por padrão) e o hook `useTema`.
-  - `Botao`, `Campo`, `Cartao`, `Medalhao`, `Selo`, `Aviso`, `EstadoVazio`, `CabecalhoApp`, `BarraProgresso`.
-- **Responsividade**: layout pensado para **celular e tablet**. Os pontos de quebra ficam em
-  `@montaje/ui` (`pontoTablet` 720px, `pontoDesktop` 1080px, `pontoAmplo` 1440px) e são usados
-  via `@media` nas `makeStyles`:
-  - listas de locais/seções: **1 coluna** no celular → **2** a partir de 720px → **3** a partir de 1080px;
-  - container: 720px → 1024px (≥720) → 1240px (≥1440);
-  - a barra inferior respeita `env(safe-area-inset-bottom)`.
-- Os **tokens** (cores, tipografia, espaçamento, raio, sombra) vêm de
-  `@fluentui/react-components` (`tokens`) e são usados via `makeStyles`. Não há CSS utilitário.
-- Cor de marca (roxo do Teams): **`#5B5FC7`**. Já aplicada no `theme-color`, no manifesto PWA
-  e no ícone do app.
-- Cada app envolve a árvore com `<ProvedorMontaje>` (ver `apps/*/src/main.tsx`).
-- Os ícones vêm de `@fluentui/react-icons`.
+- **App da equipe (`apps/equipe`) — Fluent UI React v9 (Fluent 2)**:
+  - `packages/ui` expõe o provedor de tema e os componentes reutilizáveis:
+    - `ProvedorMontaje` — `FluentProvider` com o tema do Teams (`teamsLightTheme` / `teamsDarkTheme`) e o hook `useTema`.
+    - `Botao`, `Campo`, `Cartao`, `Medalhao`, `Selo`, `Aviso`, `EstadoVazio`, `CabecalhoApp`, `BarraProgresso`.
+  - **Responsividade** para **celular e tablet**. Pontos de quebra em `@montaje/ui`
+    (`pontoTablet` 720px, `pontoDesktop` 1080px, `pontoAmplo` 1440px) usados via `@media` nas `makeStyles`
+    (listas: 1 coluna no celular → 2 a partir de 720px → 3 a partir de 1080px).
+  - **Tokens** (cores, tipografia, espaçamento, raio, sombra) vêm de `@fluentui/react-components`
+    (`tokens`) via `makeStyles`. Sem CSS utilitário. Ícones de `@fluentui/react-icons`.
+  - A árvore é envolvida por `<ProvedorMontaje>` (ver `apps/equipe/src/main.tsx`).
+- **Painel do cartório (`apps/cartorio`) — shadcn/ui + Tailwind CSS v4**:
+  - Os utilitários do shadcn (`bg-background`, `bg-primary`, `border-border`, …) são mapeados para os
+    **tokens de cor do Teams** em `apps/cartorio/src/styles/index.css` (bloco `@theme inline`).
+  - Componentes em `apps/cartorio/src/components/ui` (Button, Card, Badge, Select, Tabs, …).
+  - Ícones de `lucide-react`. Não usa `@montaje/ui` nem Fluent.
 
-> O Tailwind foi **removido** do projeto. Para novas telas, use os componentes de `@montaje/ui`
-> e `makeStyles` + `tokens` do Fluent — evite reintroduzir uma segunda biblioteca de estilos.
+> O **app da equipe** segue em Fluent UI + `@montaje/ui` (sem CSS utilitário). O **painel do cartório**
+> usa shadcn/ui + Tailwind v4 com os tokens do Teams — não misture as duas stacks dentro do mesmo app.
 
 ## Fluxo de campo (app da equipe)
 

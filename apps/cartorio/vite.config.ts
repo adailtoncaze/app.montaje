@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
   envDir: fileURLToPath(new URL('../..', import.meta.url)),
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -16,7 +17,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          fluent: ['@fluentui/react-components', '@fluentui/react-icons'],
+          ui: ['lucide-react', 'class-variance-authority'],
           dados: ['@supabase/supabase-js', '@tanstack/react-query'],
         },
       },

@@ -1,175 +1,101 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { CircleCheck, MapPin, Search, TriangleAlert } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import {
-  Checkbox,
-  Dropdown,
-  Option,
-  Spinner,
-  Text,
-  Title2,
-  makeStyles,
-  tokens,
-} from '@fluentui/react-components';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-  CheckmarkCircle24Regular,
-  Location24Regular,
-  Warning24Regular,
-} from '@fluentui/react-icons';
-import {
-  Aviso,
-  BarraProgresso,
-  Campo,
-  Cartao,
-  EstadoVazio,
-  Medalhao,
-  Selo,
-  pontoDesktop,
-  pontoTablet,
-} from '@montaje/ui';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { Medalhao } from '@/components/medalhao';
+import { Progresso } from '@/components/progress-bar';
+import { StatCard } from '@/components/stat-card';
 import { useLocais, type LocalComSecoes } from '@/lib/dados';
 import { ROTULO_SITUACAO, tomSituacao } from '@/lib/status-ui';
+import { cn } from '@/lib/utils';
 
-/** Filtro principal da lista, pelo que o cartório precisa enxergar. */
 type Filtro = 'todas' | 'aguardando' | 'correcao' | 'nao_conformes' | 'concluidos';
 
-const useClasses = makeStyles({
-  pagina: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalL,
-  },
-  resumo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: tokens.spacingHorizontalM,
-  },
-  contador: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-    padding: tokens.spacingVerticalM,
-  },
-  numero: {
-    fontSize: '28px',
-    lineHeight: '32px',
-    fontWeight: tokens.fontWeightBold,
-  },
-  destaque: {
-    color: tokens.colorBrandForeground1,
-  },
-  alerta: {
-    color: tokens.colorPaletteRedForeground1,
-  },
-  filtros: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: tokens.spacingHorizontalM,
-    alignItems: 'end',
-    [`@media ${pontoTablet}`]: {
-      gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) auto',
-    },
-  },
-  lista: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: tokens.spacingVerticalM,
-    [`@media ${pontoTablet}`]: {
-      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-      gap: tokens.spacingHorizontalL,
-    },
-    [`@media ${pontoDesktop}`]: {
-      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    },
-  },
-  conteudo: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalS,
-  },
-  meta: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-  },
-  naoConforme: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalXS,
-    color: tokens.colorPaletteRedForeground1,
-  },
-});
-
 function CartaoLocal({ local }: { local: LocalComSecoes }) {
-  const c = useClasses();
   const semLocal = local.id === 'sem-local';
-  const temPendencia = local.aguardando > 0;
   const naoConforme = local.naoConformes > 0;
 
   const conteudo = (
-    <Cartao
-      clicavel={!semLocal}
-      inicio={
-        <Medalhao tom={tomSituacao(local.situacao)}>
-          {local.situacao === 'concluida' ? <CheckmarkCircle24Regular /> : local.zona || '—'}
-        </Medalhao>
-      }
-      titulo={local.nome}
-      descricao={
-        local.endereco?.trim()
-          ? `${local.zona}ª zona · ${local.endereco}`
-          : `${local.zona}ª zona`
-      }
-      acao={
-        temPendencia ? (
-          <Selo texto={`${local.aguardando} para validar`} tom="marca" />
+    <Card className={cn('h-full', !semLocal && 'transition-shadow hover:shadow-teams-8')}>
+      <CardHeader>
+        <div className="flex min-w-0 items-start gap-3">
+          <Medalhao tom={tomSituacao(local.situacao)}>
+            {local.situacao === 'concluida' ? <CircleCheck className="size-5" /> : local.zona || '—'}
+          </Medalhao>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <CardTitle className="truncate">{local.nome}</CardTitle>
+            <CardDescription className="truncate">
+              {local.zona}ª zona{local.endereco?.trim() ? ` · ${local.endereco}` : ''}
+            </CardDescription>
+          </div>
+        </div>
+        {local.aguardando > 0 ? (
+          <Badge variant="brand">{local.aguardando} para validar</Badge>
         ) : (
-          <Selo texto={ROTULO_SITUACAO[local.situacao]} tom={tomSituacao(local.situacao)} />
-        )
-      }
-    >
-      <div className={c.conteudo}>
-        <div className={c.meta}>
-          <Selo texto={`${local.totalSecoes} seção(ões)`} tom="neutro" />
-          <Selo texto={`${local.concluidas} concluída(s)`} tom="neutro" />
-          {naoConforme && (
-            <Selo texto={`${local.naoConformes} não conforme`} tom="erro" />
-          )}
+          <Badge variant={tomSituacao(local.situacao)}>{ROTULO_SITUACAO[local.situacao]}</Badge>
+        )}
+      </CardHeader>
+
+      <CardContent>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="secondary">{local.totalSecoes} seção(ões)</Badge>
+          <Badge variant="secondary">{local.concluidas} concluída(s)</Badge>
+          {naoConforme && <Badge variant="danger">{local.naoConformes} não conforme</Badge>}
         </div>
 
         {naoConforme && (
-          <span className={c.naoConforme}>
-            <Warning24Regular />
-            <Text size={200} weight="semibold">
-              Há seção com sigilo do voto não conforme
-            </Text>
-          </span>
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
+            <TriangleAlert className="size-3.5" />
+            Há seção com sigilo do voto não conforme
+          </p>
         )}
 
         {local.totalSecoes > 0 && (
-          <BarraProgresso
+          <Progresso
             concluidos={local.concluidas}
             total={local.totalSecoes}
             rotulo={`${local.concluidas} de ${local.totalSecoes} seções concluídas`}
           />
         )}
 
-        {semLocal && <Aviso tom="alerta">Local não encontrado — confira o cadastro.</Aviso>}
-      </div>
-    </Cartao>
+        {semLocal && (
+          <Alert variant="warning">
+            <AlertDescription>Local não encontrado — confira o cadastro.</AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
   );
 
   if (semLocal) return conteudo;
-
   return (
-    <Link to={`/locais/${local.id}`} style={{ textDecorationLine: 'none', color: 'inherit' }}>
+    <Link to={`/locais/${local.id}`} className="block h-full">
       {conteudo}
     </Link>
   );
 }
 
 export function Locais() {
-  const c = useClasses();
   const { data, isLoading, error } = useLocais();
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
@@ -177,16 +103,18 @@ export function Locais() {
 
   const locais = data ?? [];
 
-  const totais = useMemo(() => {
-    return locais.reduce(
-      (acc, local) => ({
-        secoes: acc.secoes + local.totalSecoes,
-        aguardando: acc.aguardando + local.aguardando,
-        naoConformes: acc.naoConformes + local.naoConformes,
-      }),
-      { secoes: 0, aguardando: 0, naoConformes: 0 },
-    );
-  }, [locais]);
+  const totais = useMemo(
+    () =>
+      locais.reduce(
+        (acc, local) => ({
+          secoes: acc.secoes + local.totalSecoes,
+          aguardando: acc.aguardando + local.aguardando,
+          naoConformes: acc.naoConformes + local.naoConformes,
+        }),
+        { secoes: 0, aguardando: 0, naoConformes: 0 },
+      ),
+    [locais],
+  );
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -211,88 +139,90 @@ export function Locais() {
       }
 
       if (!termo) return true;
-      const alvo = `${local.zona} ${local.nome} ${local.endereco ?? ''}`;
-      return alvo.toLowerCase().includes(termo);
+      return `${local.zona} ${local.nome} ${local.endereco ?? ''}`
+        .toLowerCase()
+        .includes(termo);
     });
   }, [locais, busca, filtro, soNaoConformes]);
 
   return (
-    <div className={c.pagina}>
-      <div>
-        <Title2>Locais de votação</Title2>
-        <Text block>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-foreground">Locais de votação</h1>
+        <p className="text-sm text-muted-foreground">
           O trabalho é acompanhado por local. Abra um local para ver as seções e validar as
           evidências.
-        </Text>
+        </p>
       </div>
 
-      <div className={c.resumo}>
-        <Cartao clicavel={false} className={c.contador}>
-          <Text className={c.numero}>{locais.length}</Text>
-          <Text size={200}>Local(is)</Text>
-        </Cartao>
-        <Cartao clicavel={false} className={c.contador}>
-          <Text className={c.numero}>{totais.secoes}</Text>
-          <Text size={200}>Seções</Text>
-        </Cartao>
-        <Cartao clicavel={false} className={c.contador}>
-          <Text className={`${c.numero} ${c.destaque}`}>{totais.aguardando}</Text>
-          <Text size={200}>Aguardando validação</Text>
-        </Cartao>
-        <Cartao clicavel={false} className={c.contador}>
-          <Text className={`${c.numero} ${totais.naoConformes > 0 ? c.alerta : ''}`}>
-            {totais.naoConformes}
-          </Text>
-          <Text size={200}>Sigilo não conforme</Text>
-        </Cartao>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard valor={locais.length} rotulo="Local(is)" />
+        <StatCard valor={totais.secoes} rotulo="Seções" />
+        <StatCard valor={totais.aguardando} rotulo="Aguardando validação" tom="marca" />
+        <StatCard
+          valor={totais.naoConformes}
+          rotulo="Sigilo não conforme"
+          tom={totais.naoConformes > 0 ? 'erro' : 'neutro'}
+        />
       </div>
 
-      <div className={c.filtros}>
-        <Campo
-          rotulo="Buscar"
-          placeholder="Zona, local ou endereço"
-          value={busca}
-          onChange={(_, d) => setBusca(d.value)}
-        />
-        <Dropdown
-          aria-label="Filtrar locais"
-          value={
-            filtro === 'todas'
-              ? 'Todos os locais'
-              : {
-                  aguardando: 'Aguardando validação',
-                  correcao: 'Com correção solicitada',
-                  nao_conformes: 'Com sigilo não conforme',
-                  concluidos: 'Concluídos',
-                }[filtro]
-          }
-          selectedOptions={[filtro]}
-          onOptionSelect={(_, d) => setFiltro((d.optionValue as Filtro) ?? 'todas')}
-        >
-          <Option value="todas">Todos os locais</Option>
-          <Option value="aguardando">Aguardando validação</Option>
-          <Option value="correcao">Com correção solicitada</Option>
-          <Option value="nao_conformes">Com sigilo não conforme</Option>
-          <Option value="concluidos">Concluídos</Option>
-        </Dropdown>
-        <Checkbox
-          label="Só sigilo não conforme"
-          checked={soNaoConformes}
-          onChange={(_, d) => setSoNaoConformes(Boolean(d.checked))}
-        />
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] lg:items-end">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="busca-local">Buscar</Label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="busca-local"
+              className="pl-9"
+              placeholder="Zona, local ou endereço"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="filtro-local">Situação</Label>
+          <Select value={filtro} onValueChange={(v) => setFiltro(v as Filtro)}>
+            <SelectTrigger id="filtro-local" aria-label="Filtrar locais">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todos os locais</SelectItem>
+              <SelectItem value="aguardando">Aguardando validação</SelectItem>
+              <SelectItem value="correcao">Com correção solicitada</SelectItem>
+              <SelectItem value="nao_conformes">Com sigilo não conforme</SelectItem>
+              <SelectItem value="concluidos">Concluídos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex h-9 items-center gap-2">
+          <Checkbox
+            id="so-nao-conformes"
+            checked={soNaoConformes}
+            onCheckedChange={(v) => setSoNaoConformes(v === true)}
+          />
+          <Label htmlFor="so-nao-conformes" className="font-medium">
+            Só sigilo não conforme
+          </Label>
+        </div>
       </div>
 
       {isLoading && <Spinner label="Carregando locais..." />}
 
       {error && (
-        <Aviso tom="erro" titulo="Não foi possível carregar os locais">
-          {error instanceof Error ? error.message : 'Tente novamente.'}
-        </Aviso>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <strong className="block">Não foi possível carregar os locais</strong>
+            {error instanceof Error ? error.message : 'Tente novamente.'}
+          </AlertDescription>
+        </Alert>
       )}
 
       {!isLoading && !error && filtrados.length === 0 && (
-        <EstadoVazio
-          icone={<Location24Regular />}
+        <EmptyState
+          icone={<MapPin />}
           titulo={locais.length === 0 ? 'Nenhum local cadastrado' : 'Nenhum local encontrado'}
           descricao={
             locais.length === 0
@@ -303,7 +233,7 @@ export function Locais() {
       )}
 
       {!isLoading && filtrados.length > 0 && (
-        <div className={c.lista}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtrados.map((local) => (
             <CartaoLocal key={local.id} local={local} />
           ))}

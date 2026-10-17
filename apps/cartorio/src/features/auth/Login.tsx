@@ -1,49 +1,30 @@
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
-import { zLoginCartorio, emailSintetico, type LoginCartorio, type Perfil } from '@montaje/core';
-import { Text, Title1, makeStyles, tokens } from '@fluentui/react-components';
-import { Aviso, Botao, Campo } from '@montaje/ui';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { CircleAlert, Landmark, LoaderCircle } from 'lucide-react';
+import { emailSintetico, zLoginCartorio, type LoginCartorio, type Perfil } from '@montaje/core';
+import { Alert, AlertDescription, AlertIcon, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase, supabaseConfigurado } from '@/lib/supabase';
 import { useSessao } from './store';
 
-const useClasses = makeStyles({
-  pagina: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: tokens.spacingVerticalL,
-    minHeight: '100%',
-    padding: tokens.spacingVerticalXXL,
-  },
-  marca: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: tokens.spacingVerticalXS,
-  },
-  formulario: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-    width: '100%',
-    maxWidth: '380px',
-  },
-});
-
 export function Login() {
-  const c = useClasses();
   const navigate = useNavigate();
+  const perfilAtual = useSessao((s) => s.perfil);
   const definirPerfil = useSessao((s) => s.definirPerfil);
   const [erro, setErro] = useState<string | null>(null);
 
   const {
-    control,
+    register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginCartorio>({ resolver: zodResolver(zLoginCartorio) });
+
+  if (perfilAtual) return <Navigate to="/" replace />;
 
   async function entrar(dados: LoginCartorio) {
     setErro(null);
@@ -75,67 +56,75 @@ export function Login() {
       }
 
       definirPerfil(perfil as Perfil);
-      navigate('/secoes', { replace: true });
+      navigate('/', { replace: true });
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao entrar');
     }
   }
 
   return (
-    <main className={c.pagina}>
-      <div className={c.marca}>
-        <Text size={600} weight="bold" style={{ color: tokens.colorBrandForeground1 }}>
-          MontaJE
-        </Text>
-        <Title1>Cartório</Title1>
-        <Text size={300}>Painel de validação das seções</Text>
+    <main className="flex min-h-full items-center justify-center p-6">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Landmark className="size-6" />
+          </span>
+          <div className="flex flex-col">
+            <span className="text-xl font-bold text-primary">MontaJE</span>
+            <h1 className="text-lg font-semibold text-foreground">Painel do Cartório</h1>
+            <p className="text-sm text-muted-foreground">Validação das seções</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardContent>
+            <form onSubmit={handleSubmit(entrar)} className="flex flex-col gap-4" noValidate>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="identificador">E-mail ou matrícula</Label>
+                <Input
+                  id="identificador"
+                  autoComplete="username"
+                  placeholder="validador@cartorio.local"
+                  aria-invalid={Boolean(errors.identificador)}
+                  {...register('identificador')}
+                />
+                {errors.identificador && (
+                  <p className="text-xs text-danger">{errors.identificador.message}</p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="senha">Senha</Label>
+                <Input
+                  id="senha"
+                  type="password"
+                  autoComplete="current-password"
+                  aria-invalid={Boolean(errors.senha)}
+                  {...register('senha')}
+                />
+                {errors.senha && <p className="text-xs text-danger">{errors.senha.message}</p>}
+              </div>
+
+              {erro && (
+                <Alert variant="destructive">
+                  <AlertIcon>
+                    <CircleAlert />
+                  </AlertIcon>
+                  <div className="flex flex-col gap-1">
+                    <AlertTitle>Não foi possível entrar</AlertTitle>
+                    <AlertDescription>{erro}</AlertDescription>
+                  </div>
+                </Alert>
+              )}
+
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting && <LoaderCircle className="animate-spin" />}
+                Entrar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
-
-      <form onSubmit={handleSubmit(entrar)} className={c.formulario} noValidate>
-        <Controller
-          name="identificador"
-          control={control}
-          render={({ field }) => (
-            <Campo
-              rotulo="E-mail ou matrícula"
-              placeholder="validador@cartorio.local"
-              autoComplete="username"
-              erro={errors.identificador?.message}
-              value={field.value ?? ''}
-              onChange={(_, d) => field.onChange(d.value)}
-              onBlur={field.onBlur}
-              name={field.name}
-            />
-          )}
-        />
-
-        <Controller
-          name="senha"
-          control={control}
-          render={({ field }) => (
-            <Campo
-              rotulo="Senha"
-              type="password"
-              autoComplete="current-password"
-              erro={errors.senha?.message}
-              value={field.value ?? ''}
-              onChange={(_, d) => field.onChange(d.value)}
-              onBlur={field.onBlur}
-              name={field.name}
-            />
-          )}
-        />
-
-        {erro && (
-          <Aviso tom="erro" titulo="Não foi possível entrar">
-            {erro}
-          </Aviso>
-        )}
-
-        <Botao type="submit" carregando={isSubmitting}>
-          Entrar
-        </Botao>
-      </form>
     </main>
   );
 }

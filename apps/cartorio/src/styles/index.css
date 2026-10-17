@@ -1,13 +1,190 @@
-/* Base mínima. O tema vem do design system (Fluent 2 / Teams) via <ProvedorMontaje />. */
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-html,
-body,
-#root {
-  height: 100%;
+/*
+ * Tema do painel do cartório.
+ *
+ * Os utilitários do shadcn/ui (bg-background, text-foreground, border-border,
+ * bg-primary, ...) são mapeados para os tokens oficiais do Microsoft Teams
+ * (Fluent 2 — `teamsLightTheme`). Os valores abaixo foram extraídos do próprio
+ * tema do Teams para manter as cores fiéis.
+ */
+
+@source '../../index.html';
+@source '../';
+
+:root {
+  --radius: 0.5rem; /* 8px — Fluent borderRadiusXLarge */
+
+  /* Superfícies */
+  --background: #f5f5f5; /* colorNeutralBackground3 */
+  --foreground: #242424; /* colorNeutralForeground1 */
+  --card: #ffffff; /* colorNeutralBackground1 */
+  --card-foreground: #242424;
+  --popover: #ffffff;
+  --popover-foreground: #242424;
+
+  /* Marca (roxo do Teams) */
+  --primary: #5b5fc7; /* colorBrandBackground */
+  --primary-foreground: #ffffff; /* colorNeutralForegroundOnBrand */
+  --primary-hover: #4f52b2; /* colorBrandBackgroundHover */
+  --primary-pressed: #383966; /* colorBrandBackgroundPressed */
+  --primary-subtle: #e8ebfa; /* colorBrandBackground2 */
+  --primary-subtle-foreground: #4f52b2; /* colorBrandForeground2 */
+
+  /* Secundário / neutros */
+  --secondary: #ffffff;
+  --secondary-foreground: #242424;
+  --muted: #f5f5f5; /* colorNeutralBackground3 */
+  --muted-foreground: #616161; /* colorNeutralForeground3 */
+  --accent: #f5f5f5; /* colorSubtleBackgroundHover */
+  --accent-foreground: #242424;
+  --accent-pressed: #e0e0e0; /* colorSubtleBackgroundPressed */
+
+  /* Perigo (ações destrutivas) */
+  --destructive: #d13438; /* colorPaletteRedBackground3 */
+  --destructive-foreground: #ffffff;
+  --destructive-hover: #b22c30;
+
+  /* Contornos e foco */
+  --border: #e0e0e0; /* colorNeutralStroke2 */
+  --input: #d1d1d1; /* colorNeutralStroke1 */
+  --ring: #5b5fc7;
+
+  /* Estados — versões "suaves" (avisos/mensagens) */
+  --info: #4f52b2;
+  --info-bg: #e8ebfa;
+  --info-border: #c7cbf0;
+  --success: #0e700e; /* colorPaletteGreenForeground1 */
+  --success-bg: #f1faf1; /* colorPaletteGreenBackground1 */
+  --success-border: #9fd89f; /* colorPaletteGreenBackground2 */
+  --warning: #817400; /* colorPaletteYellowForeground1 */
+  --warning-bg: #fffef5; /* colorPaletteYellowBackground1 */
+  --warning-border: #f9e2ae; /* colorPaletteMarigoldBackground2 */
+  --danger: #b10e1c; /* colorStatusDangerForeground1 */
+  --danger-bg: #fdf3f4; /* colorStatusDangerBackground1 */
+  --danger-border: #f1bbbc; /* colorPaletteRedBackground2 */
+
+  /* Estados — versões "sólidas" (selos/badges) */
+  --brand-solid: #5b5fc7;
+  --brand-solid-foreground: #ffffff;
+  --success-solid: #107c10; /* colorPaletteGreenBackground3 */
+  --success-solid-foreground: #ffffff;
+  --warning-solid: #fde300; /* colorPaletteYellowBackground3 */
+  --warning-solid-foreground: #242424;
+  --danger-solid: #d13438;
+  --danger-solid-foreground: #ffffff;
+  --neutral-solid: #e0e0e0; /* colorNeutralStroke2 */
+  --neutral-solid-foreground: #424242; /* colorNeutralForeground2 */
+
+  /* Gráficos (paleta shadcn) */
+  --chart-1: #5b5fc7;
+  --chart-2: #107c10;
+  --chart-3: #d13438;
+  --chart-4: #d39300;
+  --chart-5: #038387;
 }
 
-body {
-  margin: 0;
-  background-color: #f5f5f5;
-  -webkit-tap-highlight-color: transparent;
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Apple Color Emoji',
+    'Segoe UI Emoji', sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-pressed: var(--primary-pressed);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-foreground: var(--primary-subtle-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-pressed: var(--accent-pressed);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-hover: var(--destructive-hover);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+
+  --color-brand-solid: var(--brand-solid);
+  --color-brand-solid-foreground: var(--brand-solid-foreground);
+  --color-success-solid: var(--success-solid);
+  --color-success-solid-foreground: var(--success-solid-foreground);
+  --color-warning-solid: var(--warning-solid);
+  --color-warning-solid-foreground: var(--warning-solid-foreground);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-solid-foreground: var(--danger-solid-foreground);
+  --color-neutral-solid: var(--neutral-solid);
+  --color-neutral-solid-foreground: var(--neutral-solid-foreground);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sombras do Teams (colorNeutralShadowAmbient/Key) */
+  --shadow-teams-2: 0 0 2px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.14);
+  --shadow-teams-4: 0 0 2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.14);
+  --shadow-teams-8: 0 0 2px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.14);
+  --shadow-teams-16: 0 0 2px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.14);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Foco visível único (contorno de 2px na cor de marca). */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
 }

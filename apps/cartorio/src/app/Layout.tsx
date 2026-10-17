@@ -1,113 +1,105 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { Text, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  Home24Regular,
-  Location24Regular,
-  SignOut24Regular,
-} from '@fluentui/react-icons';
-import { Botao, CabecalhoApp } from '@montaje/ui';
+  ChevronDown,
+  House,
+  Landmark,
+  LogOut,
+  MapPin,
+  User as UserIcon,
+} from 'lucide-react';
+import { ROTULO_PAPEL } from '@montaje/core';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useSessao } from '@/features/auth/store';
+import { cn } from '@/lib/utils';
 
-const useClasses = makeStyles({
-  shell: {
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100%',
-  },
-  nav: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalXS,
-    paddingTop: tokens.spacingVerticalS,
-    paddingBottom: tokens.spacingVerticalS,
-    paddingLeft: tokens.spacingHorizontalL,
-    paddingRight: tokens.spacingHorizontalL,
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderBottomWidth: tokens.strokeWidthThin,
-    borderBottomStyle: 'solid',
-    borderBottomColor: tokens.colorNeutralStroke2,
-    overflowX: 'auto',
-  },
-  link: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalXS,
-    paddingTop: tokens.spacingVerticalXS,
-    paddingBottom: tokens.spacingVerticalXS,
-    paddingLeft: tokens.spacingHorizontalM,
-    paddingRight: tokens.spacingHorizontalM,
-    borderRadius: tokens.borderRadiusMedium,
-    textDecorationLine: 'none',
-    color: tokens.colorNeutralForeground2,
-    whiteSpace: 'nowrap',
-  },
-  ativo: {
-    backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground2,
-    fontWeight: tokens.fontWeightSemibold,
-  },
-  espaco: {
-    marginLeft: 'auto',
-  },
-  usuario: {
-    color: tokens.colorNeutralForeground3,
-    whiteSpace: 'nowrap',
-  },
-  conteudo: {
-    flexGrow: 1,
-    width: '100%',
-    maxWidth: '1100px',
-    marginLeft: 'auto',
-    marginRight: 'auto',
-    padding: tokens.spacingVerticalL,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-  },
-});
+const NAVEGACAO = [
+  { to: '/', rotulo: 'Início', icone: House, exato: true },
+  { to: '/locais', rotulo: 'Locais de votação', icone: MapPin, exato: false },
+] as const;
 
 export function Layout() {
-  const c = useClasses();
+  const navigate = useNavigate();
   const perfil = useSessao((s) => s.perfil);
   const definirPerfil = useSessao((s) => s.definirPerfil);
 
+  function sair() {
+    definirPerfil(null);
+    navigate('/login', { replace: true });
+  }
+
   return (
-    <div className={c.shell}>
-      <CabecalhoApp titulo="MontaJE · Cartório" subtitulo="Painel de validação" />
+    <div className="flex min-h-full flex-col">
+      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-4">
+          <Link to="/" className="flex shrink-0 items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Landmark className="size-4" />
+            </span>
+            <span className="flex flex-col leading-none">
+              <span className="text-sm font-bold text-foreground">MontaJE</span>
+              <span className="text-[11px] text-muted-foreground">Cartório</span>
+            </span>
+          </Link>
 
-      <nav className={c.nav} aria-label="Navegação do painel">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) => mergeClasses(c.link, isActive && c.ativo)}
-        >
-          <Home24Regular />
-          Início
-        </NavLink>
-        <NavLink
-          to="/locais"
-          className={({ isActive }) => mergeClasses(c.link, isActive && c.ativo)}
-        >
-          <Location24Regular />
-          Locais de votação
-        </NavLink>
+          <nav className="ml-1 flex items-center gap-1 overflow-x-auto">
+            {NAVEGACAO.map((item) => {
+              const Icone = item.icone;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.exato}
+                  className={({ isActive }) =>
+                    cn(
+                      'inline-flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+                      isActive &&
+                        'bg-primary-subtle text-primary-subtle-foreground hover:bg-primary-subtle hover:text-primary-subtle-foreground',
+                    )
+                  }
+                >
+                  <Icone className="size-4" />
+                  <span className="hidden sm:inline">{item.rotulo}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
 
-        <span className={c.espaco} />
-        {perfil && (
-          <Text size={200} className={c.usuario}>
-            {perfil.nome}
-          </Text>
-        )}
-        <Botao
-          variante="sutil"
-          icon={<SignOut24Regular />}
-          onClick={() => definirPerfil(null)}
-        >
-          Sair
-        </Botao>
-      </nav>
+          <div className="ml-auto flex items-center gap-2">
+            {perfil && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <UserIcon />
+                    <span className="hidden max-w-[10rem] truncate sm:inline">{perfil.nome}</span>
+                    <ChevronDown className="opacity-70" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>
+                    <span className="block font-semibold text-foreground">{perfil.nome}</span>
+                    <span className="block">{ROTULO_PAPEL[perfil.papel]}</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={sair}>
+                    <LogOut />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+      </header>
 
-      <main className={c.conteudo}>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         <Outlet />
       </main>
     </div>

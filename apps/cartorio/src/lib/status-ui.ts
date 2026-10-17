@@ -1,30 +1,32 @@
 import type { Secao, StatusEtapa, StatusItem } from '@montaje/core';
-import type { TomSelo } from '@montaje/ui';
 
-/** Mapeia o status da etapa para o tom visual (design system do Teams). */
-export function tomStatusEtapa(status: StatusEtapa): TomSelo {
+/** Tons de estado disponíveis nos selos (`Badge`). */
+export type Tom = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
+
+/** Mapeia o status da etapa para o tom visual. */
+export function tomStatusEtapa(status: StatusEtapa): Tom {
   switch (status) {
     case 'aprovada':
-      return 'ok';
+      return 'success';
     case 'enviada':
-      return 'marca';
+      return 'brand';
     case 'correcao_solicitada':
-      return 'erro';
+      return 'danger';
     case 'em_montagem':
-      return 'alerta';
+      return 'warning';
     default:
-      return 'neutro';
+      return 'neutral';
   }
 }
 
-export function tomStatusItem(status: StatusItem): TomSelo {
+export function tomStatusItem(status: StatusItem): Tom {
   switch (status) {
     case 'conforme':
-      return 'ok';
+      return 'success';
     case 'nao_conforme':
-      return 'erro';
+      return 'danger';
     default:
-      return 'neutro';
+      return 'neutral';
   }
 }
 
@@ -57,16 +59,16 @@ export const ROTULO_SITUACAO: Record<SituacaoSecao, string> = {
   concluida: 'Concluída',
 };
 
-export function tomSituacao(situacao: SituacaoSecao): TomSelo {
+export function tomSituacao(situacao: SituacaoSecao): Tom {
   switch (situacao) {
     case 'aguardando':
-      return 'marca';
+      return 'brand';
     case 'correcao':
-      return 'erro';
+      return 'danger';
     case 'concluida':
-      return 'ok';
+      return 'success';
     default:
-      return 'alerta';
+      return 'warning';
   }
 }
 
