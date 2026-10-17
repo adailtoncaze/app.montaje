@@ -164,10 +164,23 @@ export function LocalDetalhe() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard valor={local.totalSecoes} rotulo="Seções" />
-        <StatCard valor={local.aguardando} rotulo="Aguardando validação" tom={local.aguardando > 0 ? 'marca' : 'neutro'} />
-        <StatCard valor={local.correcoes} rotulo="Com correção" tom={local.correcoes > 0 ? 'erro' : 'neutro'} />
+        <StatCard
+          valor={local.aguardando}
+          rotulo="Aguardando validação"
+          tom={local.aguardando > 0 ? 'marca' : 'neutro'}
+        />
+        <StatCard
+          valor={local.correcoes}
+          rotulo="Com correção"
+          tom={local.correcoes > 0 ? 'erro' : 'neutro'}
+        />
+        <StatCard
+          valor={local.naoConformes}
+          rotulo="Sigilo não conforme"
+          tom={local.naoConformes > 0 ? 'erro' : 'neutro'}
+        />
         <StatCard valor={local.concluidas} rotulo="Concluídas" />
       </div>
 

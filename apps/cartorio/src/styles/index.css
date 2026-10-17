@@ -55,9 +55,9 @@
   --info: #4f52b2;
   --info-bg: #e8ebfa;
   --info-border: #c7cbf0;
-  --success: #0e700e; /* colorPaletteGreenForeground1 */
-  --success-bg: #f1faf1; /* colorPaletteGreenBackground1 */
-  --success-border: #9fd89f; /* colorPaletteGreenBackground2 */
+  --success: #0b7a6b; /* verde-esmeralda (harmoniza com o roxo do Teams) */
+  --success-bg: #e7f5f2;
+  --success-border: #9dd6cc;
   --warning: #817400; /* colorPaletteYellowForeground1 */
   --warning-bg: #fffef5; /* colorPaletteYellowBackground1 */
   --warning-border: #f9e2ae; /* colorPaletteMarigoldBackground2 */
@@ -68,7 +68,7 @@
   /* Estados — versões "sólidas" (selos/badges) */
   --brand-solid: #5b5fc7;
   --brand-solid-foreground: #ffffff;
-  --success-solid: #107c10; /* colorPaletteGreenBackground3 */
+  --success-solid: #0b7a6b; /* verde-esmeralda */
   --success-solid-foreground: #ffffff;
   --warning-solid: #fde300; /* colorPaletteYellowBackground3 */
   --warning-solid-foreground: #242424;
@@ -79,7 +79,7 @@
 
   /* Gráficos (paleta shadcn) */
   --chart-1: #5b5fc7;
-  --chart-2: #107c10;
+  --chart-2: #0b7a6b;
   --chart-3: #d13438;
   --chart-4: #d39300;
   --chart-5: #038387;

@@ -24,7 +24,6 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Medalhao } from '@/components/medalhao';
 import { Progresso } from '@/components/progress-bar';
-import { StatCard } from '@/components/stat-card';
 import { useLocais, type LocalComSecoes } from '@/lib/dados';
 import { ROTULO_SITUACAO, tomSituacao } from '@/lib/status-ui';
 import { cn } from '@/lib/utils';
@@ -103,19 +102,6 @@ export function Locais() {
 
   const locais = data ?? [];
 
-  const totais = useMemo(
-    () =>
-      locais.reduce(
-        (acc, local) => ({
-          secoes: acc.secoes + local.totalSecoes,
-          aguardando: acc.aguardando + local.aguardando,
-          naoConformes: acc.naoConformes + local.naoConformes,
-        }),
-        { secoes: 0, aguardando: 0, naoConformes: 0 },
-      ),
-    [locais],
-  );
-
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return locais.filter((local) => {
@@ -153,17 +139,6 @@ export function Locais() {
           O trabalho é acompanhado por local. Abra um local para ver as seções e validar as
           evidências.
         </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard valor={locais.length} rotulo="Local(is)" />
-        <StatCard valor={totais.secoes} rotulo="Seções" />
-        <StatCard valor={totais.aguardando} rotulo="Aguardando validação" tom="marca" />
-        <StatCard
-          valor={totais.naoConformes}
-          rotulo="Sigilo não conforme"
-          tom={totais.naoConformes > 0 ? 'erro' : 'neutro'}
-        />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] lg:items-end">

@@ -3,11 +3,14 @@ import { Link, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
-  Camera,
+  Check,
   CircleCheck,
   ImageOff,
+  Maximize2,
+  Minus,
   TriangleAlert,
   User as UserIcon,
+  X,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertIcon } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +22,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Label } from '@/components/ui/label';
 import {
@@ -51,79 +60,153 @@ import {
 import { ROTULO_STATUS_ITEM, tomStatusEtapa, tomStatusItem } from '@/lib/status-ui';
 import { useSessao } from '@/features/auth/store';
 
-function ItemAvaliacao({
+/** Dados de uma foto preparados para o visualizador em tela cheia. */
+interface FotoAberta {
+  url: string;
+  titulo: string;
+  numero: number | null;
+  capturada: string | null;
+  coords: string | null;
+  observacao: string | null;
+  desvio: Desvio | null;
+}
+
+/** Resposta Sim/Não (ou "não respondido") como selo compacto. */
+function ChipResposta({ resposta }: { resposta: boolean | null }) {
+  if (resposta == null) return <Badge variant="secondary">Não respondido</Badge>;
+  return (
+    <Badge variant={resposta ? 'success' : 'danger'}>{resposta ? 'Sim' : 'Não'}</Badge>
+  );
+}
+
+/** Miniatura clicável da evidência (abre o visualizador). */
+function MiniaturaEvidencia({
+  url,
+  alt,
+  onAbrir,
+}: {
+  url?: string;
+  alt: string;
+  onAbrir: () => void;
+}) {
+  if (!url) {
+    return (
+      <div className="flex size-20 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-muted text-muted-foreground">
+        <ImageOff className="size-5" />
+        <span className="text-[10px] font-semibold">Sem foto</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onAbrir}
+      className="group relative size-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={`Ampliar ${alt}`}
+    >
+      <img
+        src={url}
+        alt={alt}
+        loading="lazy"
+        className="size-full object-cover transition-transform group-hover:scale-105"
+      />
+      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+        <Maximize2 className="size-4" />
+      </span>
+    </button>
+  );
+}
+
+/** Uma linha da checklist: foto (miniatura + metadados) ou confirmação (resposta). */
+function ItemRevisao({
   item,
   evidencias,
   desvio,
   urls,
+  onAbrir,
 }: {
   item: ItemChecklist;
   evidencias: Evidencia[];
   desvio: Desvio | null;
   urls: Record<string, string>;
+  onAbrir: (foto: FotoAberta) => void;
 }) {
   const evidencia = evidencias[0];
   const caminho = evidencia?.caminho_miniatura ?? evidencia?.caminho_foto ?? null;
   const url = caminho ? urls[caminho] : undefined;
   const tom = tomStatusItem(item.status);
 
+  const capturada = evidencia?.capturada_em
+    ? new Date(evidencia.capturada_em).toLocaleString('pt-BR')
+    : null;
+  const coords =
+    evidencia?.latitude != null && evidencia.longitude != null
+      ? `${evidencia.latitude.toFixed(5)}, ${evidencia.longitude.toFixed(5)}`
+      : null;
+
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <div className="flex min-w-0 items-start gap-3">
-          <Medalhao tom={tom}>
-            {item.foto_numero ?? <Camera className="size-5" />}
-          </Medalhao>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <CardTitle className="text-sm">{item.nome}</CardTitle>
-            <CardDescription>
-              {item.tipo === 'foto' ? 'Evidência fotográfica' : 'Confirmação'}
-            </CardDescription>
-          </div>
-        </div>
-        <Badge variant={tom}>{ROTULO_STATUS_ITEM[item.status]}</Badge>
-      </CardHeader>
-
-      <CardContent>
-        {item.tipo === 'confirmacao' && (
-          <p className="text-sm text-foreground">
-            Resposta:{' '}
-            <strong>
-              {item.resposta == null ? 'não respondido' : item.resposta ? 'Sim' : 'Não'}
-            </strong>
-          </p>
-        )}
-
-        {item.tipo === 'foto' &&
-          (url ? (
-            <img
-              className="max-h-90 w-full rounded-lg border border-border bg-muted object-contain"
-              src={url}
-              alt={`Evidência do item ${item.nome}`}
-              loading="lazy"
-            />
+    <li className="flex items-start gap-4 p-4">
+      {item.tipo === 'foto' ? (
+        <MiniaturaEvidencia
+          url={url}
+          alt={item.nome}
+          onAbrir={() =>
+            url &&
+            onAbrir({
+              url,
+              titulo: item.nome,
+              numero: item.foto_numero,
+              capturada,
+              coords,
+              observacao: item.observacao,
+              desvio,
+            })
+          }
+        />
+      ) : (
+        <Medalhao tom={tom} className="size-10">
+          {item.resposta == null ? (
+            <Minus className="size-5" />
+          ) : item.resposta ? (
+            <Check className="size-5" />
           ) : (
-            <Alert variant="warning">
-              <AlertIcon>
-                <ImageOff />
-              </AlertIcon>
-              <AlertDescription>Foto não enviada.</AlertDescription>
-            </Alert>
-          ))}
+            <X className="size-5" />
+          )}
+        </Medalhao>
+      )}
 
-        {evidencia?.capturada_em && (
-          <p className="text-xs text-muted-foreground">
-            {new Date(evidencia.capturada_em).toLocaleString('pt-BR')}
-            {evidencia.latitude != null && evidencia.longitude != null
-              ? ` · ${evidencia.latitude.toFixed(5)}, ${evidencia.longitude.toFixed(5)}`
-              : ''}
-          </p>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="flex min-w-0 items-baseline gap-2 text-sm font-semibold text-foreground">
+            {item.tipo === 'foto' && item.foto_numero != null && (
+              <span className="text-muted-foreground">#{item.foto_numero}</span>
+            )}
+            <span className="min-w-0 break-words">{item.nome}</span>
+          </span>
+          {item.tipo === 'foto' ? (
+            <Badge variant={tom}>{ROTULO_STATUS_ITEM[item.status]}</Badge>
+          ) : (
+            <ChipResposta resposta={item.resposta} />
+          )}
+        </div>
+
+        <span className="text-xs text-muted-foreground">
+          {item.tipo === 'foto' ? 'Evidência fotográfica' : 'Confirmação'}
+          {capturada ? ` · ${capturada}` : ''}
+          {coords ? ` · ${coords}` : ''}
+        </span>
+
+        {item.tipo === 'foto' && !url && (
+          <span className="text-xs font-semibold text-warning">Foto não enviada.</span>
         )}
 
-        {item.observacao && <p className="text-xs text-foreground">Obs.: {item.observacao}</p>}
+        {item.observacao && (
+          <span className="text-xs text-foreground">Obs.: {item.observacao}</span>
+        )}
 
         {desvio && (
-          <Alert variant="warning">
+          <Alert variant="warning" className="mt-1 py-2">
             <AlertDescription>
               <strong className="block">Desvio: {ROTULO_MOTIVO[desvio.motivo]}</strong>
               {desvio.observacao?.trim() || 'Sem observação.'}
@@ -132,12 +215,12 @@ function ItemAvaliacao({
         )}
 
         {!desvio && item.status === 'nao_conforme' && (
-          <Alert variant="warning">
-            <AlertDescription>Resposta "Não" sem desvio registrado.</AlertDescription>
-          </Alert>
+          <span className="text-xs font-semibold text-warning">
+            Resposta "Não" sem desvio registrado.
+          </span>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </li>
   );
 }
 
@@ -320,7 +403,11 @@ function PainelValidacao({
             <CircleCheck />
             Aprovar Etapa {etapa}
           </Button>
-          <Button variant="destructive" disabled={enviando} onClick={() => registrar('correcao_solicitada')}>
+          <Button
+            variant="destructive"
+            disabled={enviando}
+            onClick={() => registrar('correcao_solicitada')}
+          >
             <TriangleAlert />
             Solicitar correção
           </Button>
@@ -358,7 +445,10 @@ function Historico({
       </CardHeader>
       <CardContent>
         {validacoes.map((v) => (
-          <div key={v.id} className="flex flex-col gap-1 border-b border-border pb-3 last:border-0 last:pb-0">
+          <div
+            key={v.id}
+            className="flex flex-col gap-1 border-b border-border pb-3 last:border-0 last:pb-0"
+          >
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={v.status === 'aprovada' ? 'success' : 'danger'}>
                 Etapa {v.etapa}: {ROTULO_STATUS_ETAPA[v.status]}
@@ -389,6 +479,7 @@ export function SecaoDetalhe() {
   const perfil = useSessao((s) => s.perfil);
   const queryClient = useQueryClient();
   const [etapa, setEtapa] = useState<Etapa>(1);
+  const [foto, setFoto] = useState<FotoAberta | null>(null);
 
   const { data, isLoading, error } = useSecao(secaoId);
 
@@ -419,6 +510,9 @@ export function SecaoDetalhe() {
   const itensEtapa = itens.filter((item) => item.etapa === etapa);
   const ultimaDaEtapa = validacoes.find((v) => v.etapa === etapa) ?? null;
   const sigiloDaEtapa = etapa === 2 ? sigilo : [];
+  const fotosSemEnvio = itensEtapa.filter(
+    (item) => item.tipo === 'foto' && !(evidenciasPorItem[item.id]?.length),
+  ).length;
 
   function recarregar() {
     void queryClient.invalidateQueries({ queryKey: ['secao', secaoId] });
@@ -474,7 +568,6 @@ export function SecaoDetalhe() {
           <TabsTrigger value="1">Etapa 1 · Montagem</TabsTrigger>
           <TabsTrigger value="2">Etapa 2 · Sigilo do voto</TabsTrigger>
         </TabsList>
-
       </Tabs>
 
       {perfil && (
@@ -495,38 +588,97 @@ export function SecaoDetalhe() {
           descricao="Os itens são materializados quando o cronograma do local é criado."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {itensEtapa.map((item) => (
-            <ItemAvaliacao
-              key={item.id}
-              item={item}
-              evidencias={evidenciasPorItem[item.id] ?? []}
-              desvio={desvioPorItem[item.id] ?? null}
-              urls={urls}
-            />
-          ))}
-        </div>
+        <Card className="overflow-hidden">
+          <div className="flex flex-col gap-0.5 border-b border-border px-5 py-4">
+            <CardTitle>Checklist da Etapa {etapa}</CardTitle>
+            <CardDescription>
+              {itensEtapa.length} item(ns)
+              {fotosSemEnvio > 0 ? ` · ${fotosSemEnvio} sem foto` : ''}
+              {' · clique na foto para ampliar'}
+            </CardDescription>
+          </div>
+          <ul className="divide-y divide-border">
+            {itensEtapa.map((item) => (
+              <ItemRevisao
+                key={item.id}
+                item={item}
+                evidencias={evidenciasPorItem[item.id] ?? []}
+                desvio={desvioPorItem[item.id] ?? null}
+                urls={urls}
+                onAbrir={setFoto}
+              />
+            ))}
+          </ul>
+        </Card>
       )}
 
       {sigiloDaEtapa.length > 0 && (
-        <Card>
-          <CardHeader>
+        <Card className="overflow-hidden">
+          <div className="flex flex-col gap-0.5 border-b border-border px-5 py-4">
             <CardTitle>Respostas de sigilo</CardTitle>
-          </CardHeader>
-          <CardContent>
+            <CardDescription>
+              Perguntas eliminatórias da Etapa 2 (regra 1 do PRD).
+            </CardDescription>
+          </div>
+          <ul className="divide-y divide-border">
             {sigiloDaEtapa.map((s) => (
-              <p key={s.id} className="text-sm text-foreground">
-                {s.pergunta}:{' '}
-                <strong>
-                  {s.resposta == null ? 'não respondido' : s.resposta ? 'Sim' : 'Não'}
-                </strong>
-              </p>
+              <li
+                key={s.id}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3"
+              >
+                <span className="min-w-0 flex-1 text-sm text-foreground">{s.pergunta}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  {s.critica && <Badge variant="outline">Crítica</Badge>}
+                  <ChipResposta resposta={s.resposta} />
+                </span>
+              </li>
             ))}
-          </CardContent>
+          </ul>
         </Card>
       )}
 
       <Historico validacoes={validacoes} itens={itens} />
+
+      <Dialog open={foto !== null} onOpenChange={(aberto) => !aberto && setFoto(null)}>
+        <DialogContent className="max-w-3xl">
+          {foto && (
+            <>
+              <div className="border-b border-border p-4 pr-14">
+                <DialogTitle>{foto.titulo}</DialogTitle>
+                <DialogDescription>
+                  {foto.numero != null ? `Foto #${foto.numero} · ` : ''}
+                  {foto.capturada ?? 'Data não informada'}
+                  {foto.coords ? ` · ${foto.coords}` : ''}
+                </DialogDescription>
+              </div>
+              <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-muted p-2">
+                <img
+                  src={foto.url}
+                  alt={foto.titulo}
+                  className="max-h-[70vh] w-auto rounded-md object-contain"
+                />
+              </div>
+              {(foto.observacao || foto.desvio) && (
+                <div className="flex flex-col gap-2 border-t border-border p-4">
+                  {foto.observacao && (
+                    <p className="text-sm text-foreground">Obs.: {foto.observacao}</p>
+                  )}
+                  {foto.desvio && (
+                    <Alert variant="warning">
+                      <AlertDescription>
+                        <strong className="block">
+                          Desvio: {ROTULO_MOTIVO[foto.desvio.motivo]}
+                        </strong>
+                        {foto.desvio.observacao?.trim() || 'Sem observação.'}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
