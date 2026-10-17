@@ -55,9 +55,9 @@
   --info: #4f52b2;
   --info-bg: #e8ebfa;
   --info-border: #c7cbf0;
-  --success: #1b7a1b; /* verde legivel para texto (tom escuro do #98fb98) */
+  --success: #1b7a1b; /* verde legivel para texto (tom escuro do #36cc36) */
   --success-bg: #eafce9;
-  --success-border: #98fb98;
+  --success-border: #36cc36;
   --warning: #817400; /* colorPaletteYellowForeground1 */
   --warning-bg: #fffef5; /* colorPaletteYellowBackground1 */
   --warning-border: #f9e2ae; /* colorPaletteMarigoldBackground2 */
@@ -68,7 +68,7 @@
   /* Estados — versões "sólidas" (selos/badges) */
   --brand-solid: #5b5fc7;
   --brand-solid-foreground: #ffffff;
-  --success-solid: #98fb98; /* verde solicitado (selos/medalhoes) */
+  --success-solid: #36cc36; /* verde solicitado (selos/medalhoes) */
   --success-solid-foreground: #0a3d0a;
   --warning-solid: #fde300; /* colorPaletteYellowBackground3 */
   --warning-solid-foreground: #242424;
@@ -79,7 +79,7 @@
 
   /* Gráficos (paleta shadcn) */
   --chart-1: #5b5fc7;
-  --chart-2: #98fb98;
+  --chart-2: #36cc36;
   --chart-3: #d13438;
   --chart-4: #d39300;
   --chart-5: #038387;
