@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ROTULO_STATUS_ETAPA, type Etapa } from '@montaje/core';
+import { ROTULO_STATUS_ETAPA, perguntaDeSigilo, type Etapa } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
 import {
   ArrowLeft24Regular,
@@ -87,6 +87,15 @@ export function ResumoEtapa() {
     [secaoId],
     [],
   );
+  const desvios = useLiveQuery(
+    async () => {
+      const ids = (await db.itens.where('secao_id').equals(secaoId).toArray()).map((i) => i.id);
+      if (ids.length === 0) return [];
+      return db.desvios.where('item_id').anyOf(ids).toArray();
+    },
+    [secaoId],
+    [],
+  );
 
   const checklist = `/locais/${localId}/secoes/${secaoId}/etapa/${etapa}`;
 
@@ -96,13 +105,23 @@ export function ResumoEtapa() {
   );
   const concluidos = itens.length - pendencias.length;
 
+  // APP-21 — sigilo do voto: qualquer "nao" exige desvio registrado para liberar o envio.
+  const desvioItemIds = new Set(desvios.map((d) => d.item_id));
+  const sigiloItens = ordenados.filter((i) => perguntaDeSigilo(i.nome));
+  const sigiloComprometido = sigiloItens.some((i) => i.resposta === false);
+  const sigiloSemDesvio = sigiloItens.filter(
+    (i) => i.resposta === false && !desvioItemIds.has(i.id),
+  );
+  const bloqueioSigilo = etapa === 2 && sigiloSemDesvio.length > 0;
+
   const statusAtual = secao
     ? etapa === 1
       ? secao.status_etapa1
       : secao.status_etapa2
     : 'pendente';
   const jaEnviada = statusAtual === 'enviada' || statusAtual === 'aprovada';
-  const podeEnviar = Boolean(secao) && itens.length > 0 && !jaEnviada && pendencias.length === 0;
+  const podeEnviar =
+    Boolean(secao) && itens.length > 0 && !jaEnviada && pendencias.length === 0 && !bloqueioSigilo;
 
   const correcao = [...validacoes]
     .filter((v) => v.etapa === etapa && v.status === 'correcao_solicitada')
@@ -185,6 +204,41 @@ export function ResumoEtapa() {
               </Aviso>
             )}
 
+            {etapa === 2 && sigiloItens.length > 0 && (
+              <Cartao
+                titulo="Sigilo do voto"
+                descricao="Perguntas eliminatórias da Etapa 2 (regra 1)."
+                acao={
+                  <Selo
+                    texto={sigiloComprometido ? 'Comprometido' : 'Preservado'}
+                    tom={sigiloComprometido ? 'erro' : 'ok'}
+                  />
+                }
+              >
+                {sigiloSemDesvio.length > 0 ? (
+                  <>
+                    <Text size={200}>
+                      Registre o desvio das perguntas abaixo no checklist para liberar o envio:
+                    </Text>
+                    <ul className={c.lista}>
+                      {sigiloSemDesvio.map((s) => (
+                        <li key={s.id}>
+                          <Text size={200}>{s.nome}</Text>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : sigiloComprometido ? (
+                  <Text size={200}>
+                    O sigilo foi comprometido e o desvio foi registrado. A etapa será enviada como
+                    não conforme para análise do cartório.
+                  </Text>
+                ) : (
+                  <Text size={200}>Nenhuma pergunta de sigilo foi respondida como “Não”.</Text>
+                )}
+              </Cartao>
+            )}
+
             <div className={c.acoes}>
               <Link to={checklist} style={{ textDecoration: 'none' }}>
                 <Botao variante="secundario" icon={<ArrowLeft24Regular />}>
@@ -213,6 +267,15 @@ export function ResumoEtapa() {
               <div className={c.acoes}>
                 <Dismiss24Regular />
                 <Text size={200}>O envio fica bloqueado enquanto houver pendências.</Text>
+              </div>
+            )}
+
+            {!jaEnviada && bloqueioSigilo && (
+              <div className={c.acoes}>
+                <Dismiss24Regular />
+                <Text size={200}>
+                  O envio fica bloqueado enquanto o desvio do sigilo do voto não for registrado.
+                </Text>
               </div>
             )}
           </>

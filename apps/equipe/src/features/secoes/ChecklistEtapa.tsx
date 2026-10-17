@@ -4,6 +4,7 @@ import {
   ROTULO_STATUS_ETAPA,
   etapaLiberada,
   motivoBloqueioEtapa2,
+  perguntaDeSigilo,
   type Etapa,
 } from '@montaje/core';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
@@ -26,6 +27,7 @@ import { tomStatusEtapa } from '@/lib/status-ui';
 import { ItemConfirmacao } from './ItemConfirmacao';
 import { ItemFoto } from './ItemFoto';
 import { ReferenciaEtapa1 } from './ReferenciaEtapa1';
+import { SigiloEtapa } from './SigiloEtapa';
 
 const useClasses = makeStyles({
   pagina: {
@@ -97,6 +99,8 @@ export function ChecklistEtapa() {
   const somenteLeitura = statusEtapa === 'enviada' || statusEtapa === 'aprovada';
   const ordenados = [...itens].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
   const concluidos = itens.filter((i) => i.status !== 'pendente').length;
+  const sigiloItens = ordenados.filter((i) => perguntaDeSigilo(i.nome));
+  const demaisItens = ordenados.filter((i) => !perguntaDeSigilo(i.nome));
 
   const bloqueada = etapa === 2 && secao ? !etapaLiberada(2, secao.status_etapa1) : false;
   const motivo = secao ? motivoBloqueioEtapa2(secao.status_etapa1) : null;
@@ -158,25 +162,35 @@ export function ChecklistEtapa() {
                 descricao="Os itens desta etapa não estão no aparelho. Use 'Baixar dados do dia' em Ajustes."
               />
             ) : (
-              <div className={c.lista}>
-                {ordenados.map((item) =>
-                  item.tipo === 'foto' ? (
-                    <ItemFoto
-                      key={item.id}
-                      item={item}
-                      secaoId={secaoId}
-                      somenteLeitura={somenteLeitura}
-                    />
-                  ) : (
-                    <ItemConfirmacao
-                      key={item.id}
-                      item={item}
-                      secaoId={secaoId}
-                      somenteLeitura={somenteLeitura}
-                    />
-                  ),
+              <>
+                <SigiloEtapa
+                  itens={sigiloItens}
+                  secaoId={secaoId}
+                  somenteLeitura={somenteLeitura}
+                />
+
+                {demaisItens.length > 0 && (
+                  <div className={c.lista}>
+                    {demaisItens.map((item) =>
+                      item.tipo === 'foto' ? (
+                        <ItemFoto
+                          key={item.id}
+                          item={item}
+                          secaoId={secaoId}
+                          somenteLeitura={somenteLeitura}
+                        />
+                      ) : (
+                        <ItemConfirmacao
+                          key={item.id}
+                          item={item}
+                          secaoId={secaoId}
+                          somenteLeitura={somenteLeitura}
+                        />
+                      ),
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
 
             <div className={c.rodape}>

@@ -33,6 +33,31 @@ export function perguntasDaEtapa(etapa: Etapa): PerguntaSigilo[] {
   return PERGUNTAS_SIGILO.filter((p) => p.etapa === etapa);
 }
 
+/** Normaliza o texto de uma pergunta para comparacao (sem acento, minusculo, espacos). */
+export function normalizarPergunta(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * APP-21 — identifica se o nome de um item do checklist corresponde a uma pergunta
+ * de sigilo do voto. As perguntas vivem como constantes; o checklist e semeado com
+ * exatamente o mesmo texto, entao a comparacao e normalizada (acento/caixa/espaco).
+ */
+export function perguntaDeSigilo(nome: string): PerguntaSigilo | undefined {
+  const alvo = normalizarPergunta(nome);
+  return PERGUNTAS_SIGILO.find((p) => normalizarPergunta(p.texto) === alvo);
+}
+
+/** Nomes exatos (normalizados) das perguntas de sigilo, para filtros no cliente. */
+export const NOMES_SIGILO_NORMALIZADOS: string[] = PERGUNTAS_SIGILO.map((p) =>
+  normalizarPergunta(p.texto),
+);
+
 /** Regra 1: qualquer resposta "nao" numa pergunta de sigilo torna a secao nao conforme. */
 export function sigiloConforme(
   respostas: Array<{ critica: boolean; resposta: boolean | null }>,

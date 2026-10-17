@@ -146,7 +146,15 @@ export async function baixarDadosDoDia(): Promise<ResultadoDownload> {
      db.validacoes, db.sigilo, db.desvios, db.evidencias, db.layout, db.meta],
     async () => {
       await db.locais.bulkPut(locaisRes.data ?? []);
-      await db.secoes.bulkPut(secoes.map((s) => ({ ...s, syncState: 'enviado' as const })));
+      // Nao sobrescreve status/conformidade de secao com alteracao local ainda nao enviada
+      // (ex.: sigilo respondido em campo marca `conforme = false`).
+      for (const s of secoes) {
+        const local = await db.secoes.get(s.id);
+        if (local && (local.syncState === 'pendente_envio' || local.syncState === 'erro')) {
+          continue;
+        }
+        await db.secoes.put({ ...s, syncState: 'enviado' });
+      }
       await db.cronograma.bulkPut(cronograma);
       await db.modeloChecklist.bulkPut(modelo);
       // Nao sobrescreve o que o usuario ja preencheu e ainda nao enviou

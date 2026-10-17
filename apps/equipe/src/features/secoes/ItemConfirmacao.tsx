@@ -9,10 +9,16 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import { Checkmark24Regular, Dismiss24Regular } from '@fluentui/react-icons';
-import { ROTULO_MOTIVO, type MotivoDesvio } from '@montaje/core';
+import { ROTULO_MOTIVO, perguntaDeSigilo, type MotivoDesvio } from '@montaje/core';
 import { Botao, Cartao, Selo } from '@montaje/ui';
 import { db, type ItemLocal } from '@/db/schema';
-import { marcarEmMontagem, removerDesvio, responderItem, salvarDesvio } from '@/db/repo';
+import {
+  marcarEmMontagem,
+  recalcularConformidadeDaSecao,
+  removerDesvio,
+  responderItem,
+  salvarDesvio,
+} from '@/db/repo';
 
 const MOTIVOS: MotivoDesvio[] = [
   'espaco_insuficiente',
@@ -52,6 +58,12 @@ const useClasses = makeStyles({
   naoConforme: {
     color: tokens.colorPaletteRedForeground1,
   },
+  selos: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalXS,
+    flexWrap: 'wrap',
+  },
 });
 
 export function ItemConfirmacao({
@@ -80,6 +92,7 @@ export function ItemConfirmacao({
   );
 
   const resposta = item.resposta;
+  const sigilo = perguntaDeSigilo(item.nome);
 
   async function salvar(valor: boolean | null) {
     setSalvando(true);
@@ -88,6 +101,8 @@ export function ItemConfirmacao({
       await marcarEmMontagem(secaoId, item.etapa);
       // Se o item voltou a ser conforme, o desvio deixa de fazer sentido.
       if (valor === true) await removerDesvio(item.id);
+      // APP-21: resposta de sigilo recalcula a conformidade da secao (regra 1).
+      if (sigilo) await recalcularConformidadeDaSecao(secaoId);
     } finally {
       setSalvando(false);
     }
@@ -128,10 +143,13 @@ export function ItemConfirmacao({
     <Cartao
       titulo={item.nome}
       acao={
-        <Selo
-          texto={resposta === true ? 'Sim' : resposta === false ? 'Nao' : 'Pendente'}
-          tom={resposta === true ? 'ok' : resposta === false ? 'erro' : 'neutro'}
-        />
+        <div className={c.selos}>
+          {sigilo && <Selo texto="Sigilo" tom="marca" />}
+          <Selo
+            texto={resposta === true ? 'Sim' : resposta === false ? 'Nao' : 'Pendente'}
+            tom={resposta === true ? 'ok' : resposta === false ? 'erro' : 'neutro'}
+          />
+        </div>
       }
     >
       <div className={c.corpo}>
@@ -171,7 +189,9 @@ export function ItemConfirmacao({
 
         {resposta === false && (
           <Text size={200} className={c.naoConforme}>
-            Item marcado como nao conforme.
+            {sigilo
+              ? 'Pergunta eliminatória do sigilo do voto: a seção ficou NÃO CONFORME. Registre o desvio abaixo.'
+              : 'Item marcado como nao conforme.'}
           </Text>
         )}
 

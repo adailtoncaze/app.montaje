@@ -9,6 +9,8 @@ import {
 import {
   caminhoFoto,
   caminhoThumb,
+  perguntaDeSigilo,
+  sigiloConforme,
   type Etapa,
   type MotivoDesvio,
   type Secao,
@@ -63,6 +65,37 @@ export async function responderItem(
     });
     await enfileirar('item', itemId);
   });
+}
+
+/**
+ * APP-21 — recalcula a conformidade de sigilo da secao (regra 1: qualquer resposta
+ * "nao" a uma pergunta de sigilo torna a secao nao conforme) e persiste localmente.
+ * Espelha o efeito do trigger `tg_sigilo_marca` no servidor.
+ *
+ * O sigilo do MVP vive como item do checklist (`PERGUNTAS_SIGILO` casam por texto com
+ * as confirmacoes da Etapa 2), entao o app nunca escreve em `respostas_sigilo`. Na
+ * sincronizacao (APP-24) sera preciso persistir `secoes.conforme` (ou criar as linhas
+ * de `respostas_sigilo`) para o cartorio enxergar a nao conformidade.
+ */
+export async function recalcularConformidadeDaSecao(secaoId: string): Promise<boolean> {
+  const itens = await db.itens.where('secao_id').equals(secaoId).toArray();
+  const respostas = itens
+    .filter((i) => perguntaDeSigilo(i.nome))
+    .map((i) => ({ critica: true, resposta: i.resposta }));
+  const conforme = sigiloConforme(respostas);
+
+  const secao = await db.secoes.get(secaoId);
+  if (secao && secao.conforme !== conforme) {
+    await db.transaction('rw', db.secoes, db.outbox, async () => {
+      await db.secoes.update(secaoId, {
+        conforme,
+        syncState: 'pendente_envio',
+        updated_at: new Date().toISOString(),
+      });
+      await enfileirar('status', secaoId);
+    });
+  }
+  return conforme;
 }
 
 /** Enfileira um registro para envio (idempotente por refId+tipo). */
