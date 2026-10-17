@@ -7,6 +7,7 @@ import {
 import { Text, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
 import { pontoAmplo, pontoTablet } from '@montaje/ui';
 import type { ReactNode } from 'react';
+import { useSyncEngine } from '@/features/sync/useSyncEngine';
 
 const useClasses = makeStyles({
   app: {
@@ -99,6 +100,8 @@ function ItemNav({
 
 export function AppShell() {
   const c = useClasses();
+  // APP-24: envio automatico enquanto o app estiver aberto (monta uma vez por sessao).
+  useSyncEngine();
   return (
     <div className={c.app}>
       <main className={c.conteudo}>

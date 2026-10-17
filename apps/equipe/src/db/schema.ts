@@ -36,6 +36,8 @@ export interface OutboxItem {
   tentativas: number;
   criadoEm: number;
   atualizadoEm: number;
+  /** Última mensagem de erro do envio (para diagnóstico na tela de envio). */
+  ultimoErro?: string;
 }
 
 export interface MetaLocal {

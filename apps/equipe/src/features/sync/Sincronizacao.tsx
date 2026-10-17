@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useState } from 'react';
 import { Text, makeStyles, tokens } from '@fluentui/react-components';
-import { CloudArrowUp24Regular } from '@fluentui/react-icons';
-import { Aviso, CabecalhoApp, Cartao, EstadoVazio, pontoTablet } from '@montaje/ui';
+import { ArrowSync24Regular, CloudArrowUp24Regular } from '@fluentui/react-icons';
+import { Aviso, Botao, CabecalhoApp, Cartao, EstadoVazio, pontoTablet } from '@montaje/ui';
 import { db } from '@/db/schema';
+import { sincronizarTudo, type ResultadoSync } from './engine';
 
 const useClasses = makeStyles({
   pagina: {
@@ -40,10 +42,20 @@ const useClasses = makeStyles({
   enviado: {
     color: tokens.colorPaletteGreenForeground1,
   },
+  acoes: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
+    flexWrap: 'wrap',
+  },
+  lista: {
+    margin: 0,
+    paddingLeft: tokens.spacingHorizontalL,
+  },
 });
 
 export function Sincronizacao() {
   const c = useClasses();
+
   const pendentes = useLiveQuery(
     () => db.outbox.where('estado').anyOf('pendente_envio', 'erro').count(),
     [],
@@ -54,6 +66,26 @@ export function Sincronizacao() {
     [],
     0,
   );
+  const comErro = useLiveQuery(() => db.outbox.where('estado').equals('erro').count(), [], 0);
+
+  const [sincronizando, setSincronizando] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoSync | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function sincronizarAgora() {
+    setErro(null);
+    setResultado(null);
+    setSincronizando(true);
+    try {
+      const r = await sincronizarTudo();
+      setResultado(r);
+      if (!r.executou && r.mensagem) setErro(r.mensagem);
+    } catch (causa) {
+      setErro(causa instanceof Error ? causa.message : 'Falha ao sincronizar.');
+    } finally {
+      setSincronizando(false);
+    }
+  }
 
   return (
     <>
@@ -70,6 +102,42 @@ export function Sincronizacao() {
             <Text size={200}>Enviados</Text>
           </Cartao>
         </div>
+
+        <div className={c.acoes}>
+          <Botao
+            variante="primario"
+            icon={<ArrowSync24Regular />}
+            carregando={sincronizando}
+            disabled={sincronizando}
+            onClick={sincronizarAgora}
+          >
+            Sincronizar agora
+          </Botao>
+        </div>
+
+        {erro && (
+          <Aviso tom="alerta" titulo="Envio não realizado">
+            {erro}
+          </Aviso>
+        )}
+
+        {resultado?.executou && (
+          <Aviso
+            tom={resultado.falhas > 0 ? 'alerta' : 'sucesso'}
+            titulo={resultado.falhas > 0 ? 'Envio parcial' : 'Envio concluído'}
+          >
+            <Text size={200}>
+              {resultado.enviados} enviado(s) · {resultado.falhas} falha(s) ·{' '}
+              {resultado.restantes} na fila
+            </Text>
+          </Aviso>
+        )}
+
+        {comErro > 0 && (
+          <Aviso tom="erro" titulo={`${comErro} registro(s) com falha`}>
+            O envio será repetido automaticamente. Se persistir, verifique a conexão.
+          </Aviso>
+        )}
 
         {pendentes === 0 ? (
           <EstadoVazio
