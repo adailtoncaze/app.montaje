@@ -1,5 +1,5 @@
 import { Badge, makeStyles, mergeClasses, tokens } from '@fluentui/react-components';
-import { Wifi420Filled, WifiOff20Regular } from '@fluentui/react-icons';
+import { Wifi120Filled, WifiOff20Regular } from '@fluentui/react-icons';
 import { useEffect, useState } from 'react';
 
 const useClasses = makeStyles({
@@ -55,7 +55,7 @@ export function IndicadorConexao({ mostrarOnline = true, className }: IndicadorC
       appearance="tint"
       color={online ? 'success' : 'warning'}
       size="medium"
-      icon={online ? <Wifi420Filled /> : <WifiOff20Regular />}
+      icon={online ? <Wifi120Filled /> : <WifiOff20Regular />}
       className={mergeClasses(c.chip, online ? c.online : c.offline, className)}
       title={online ? 'Conectado à internet' : 'Sem conexão — os dados serão enviados quando voltar'}
       aria-live="polite"
