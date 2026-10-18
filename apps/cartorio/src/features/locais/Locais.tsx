@@ -125,7 +125,7 @@ function CartaoLocal({ local }: { local: LocalComSecoes }) {
 
 function EsqueletoGrade() {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
       {Array.from({ length: 6 }).map((_, i) => (
         <Card key={i} className="h-full">
           <CardHeader>
@@ -350,7 +350,7 @@ export function Locais() {
       )}
 
       {!isLoading && filtrados.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {filtrados.map((local) => (
             <CartaoLocal key={local.id} local={local} />
           ))}

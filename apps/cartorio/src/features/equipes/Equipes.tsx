@@ -149,7 +149,7 @@ export function Equipes() {
       )}
 
       {isLoading && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-32 rounded-xl" />
           ))}
@@ -171,7 +171,7 @@ export function Equipes() {
       )}
 
       {!isLoading && !error && equipes.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {equipes.map((equipe) => (
             <CartaoEquipe key={equipe.id} equipe={equipe} onGerenciar={() => setIdAberta(equipe.id)} />
           ))}
@@ -412,7 +412,7 @@ function DialogoEquipe({ equipe, onFechar }: { equipe: EquipeDetalhe; onFechar: 
   function remover(membro: MembroDetalhe) {
     void executar(
       async () => {
-        await removerMembro(membro.perfil_id);
+        await removerMembro(equipe.id, membro.perfil_id);
         if (membro.lider) await definirLider(equipe.id, null);
       },
       { titulo: 'Membro removido', descricao: `${membro.perfil.nome} saiu da equipe.` },

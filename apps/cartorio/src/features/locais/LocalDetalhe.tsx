@@ -4,6 +4,7 @@ import {
   CircleCheck,
   Clock,
   ClipboardList,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
@@ -44,7 +45,7 @@ import { StatCard } from '@/components/stat-card';
 import { ROTULO_STATUS_ETAPA, type StatusEtapa } from '@montaje/core';
 import { useAvisoErro } from '@/lib/avisos';
 import { useLocais, type SecaoResumo } from '@/lib/dados';
-import { DialogoNovaSecao } from '@/features/locais/DialogosCadastro';
+import { DialogoEditarLocal, DialogoNovaSecao } from '@/features/locais/DialogosCadastro';
 import { useSessao } from '@/features/auth/store';
 import {
   classeAcento,
@@ -128,7 +129,7 @@ function EsqueletoDetalhe() {
         ))}
       </div>
       <Skeleton className="h-28 w-full rounded-xl" />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-44 rounded-xl" />
         ))}
@@ -147,6 +148,7 @@ export function LocalDetalhe() {
   const [filtroStatus, setFiltroStatus] = useState<StatusEtapa | 'todas'>('todas');
   const [soNaoConformes, setSoNaoConformes] = useState(false);
   const [novaSecao, setNovaSecao] = useState(false);
+  const [editando, setEditando] = useState(false);
 
   const local = useMemo(() => data?.find((l) => l.id === localId), [data, localId]);
 
@@ -205,10 +207,16 @@ export function LocalDetalhe() {
         acoes={
           <>
             {podeCadastrar && (
-              <Button onClick={() => setNovaSecao(true)}>
-                <Plus />
-                Nova seção
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => setEditando(true)}>
+                  <Pencil />
+                  Editar local
+                </Button>
+                <Button onClick={() => setNovaSecao(true)}>
+                  <Plus />
+                  Nova seção
+                </Button>
+              </>
             )}
             <Badge variant={tomSituacao(local.situacao)}>{ROTULO_SITUACAO[local.situacao]}</Badge>
             <Badge variant="secondary">{local.totalSecoes} seção(ões)</Badge>
@@ -388,7 +396,7 @@ export function LocalDetalhe() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {filtradas.map((secao) => (
             <CartaoSecao key={secao.id} secao={secao} />
           ))}
@@ -399,6 +407,12 @@ export function LocalDetalhe() {
         localId={local.id}
         aberto={novaSecao}
         onFechar={() => setNovaSecao(false)}
+      />
+
+      <DialogoEditarLocal
+        local={local}
+        aberto={editando}
+        onFechar={() => setEditando(false)}
       />
     </div>
   );

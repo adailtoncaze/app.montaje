@@ -28,6 +28,11 @@ export function DialogContent({
           'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           className,
         )}
+        // Janelas só fecham pelo botão "X" (ou por um botão explícito dentro
+        // dela, como "Cancelar"). Clique fora e Esc não fecham, para não
+        // perder o preenchimento de um formulário por engano.
+        onInteractOutside={(evento) => evento.preventDefault()}
+        onEscapeKeyDown={(evento) => evento.preventDefault()}
         {...props}
       >
         {children}

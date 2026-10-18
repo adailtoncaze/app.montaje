@@ -67,6 +67,13 @@ export interface CriarEscalaInput {
   ordem: number | null;
 }
 
+export interface AtualizarLocalInput {
+  id: string;
+  zona: number;
+  nome: string;
+  endereco?: string | null;
+}
+
 export interface NovoUsuarioInput {
   nome: string;
   matricula: string;
@@ -228,14 +235,25 @@ export async function adicionarMembro(
   if (error) throw new Error(traduzirErro(error.message, 'Este perfil já faz parte da equipe.'));
 }
 
-export async function removerMembro(perfilId: string): Promise<void> {
-  // Exclui o perfil do membro (a conta da pessoa). A linha correspondente em
-  // `membros_equipe` é removida em cascata (FK `perfil_id ... on delete cascade`),
-  // assim o membro deixa de existir efetivamente no banco. Excluir apenas de
-  // `membros_equipe` apenas desvinculava a pessoa da equipe, mas mantinha o
-  // registro em `perfis` (a pessoa ainda "existia" no sistema).
-  const { error } = await supabase().from('perfis').delete().eq('id', perfilId);
-  if (error) throw new Error(error.message);
+/**
+ * Remove o vínculo de um membro com a equipe (linha em `membros_equipe`).
+ * A exclusão é feita na tabela de vínculo — a mesma usada por
+ * `adicionarMembro` e `listarEquipes` — e não em `perfis`: excluir o perfil
+ * apagava o cadastro da pessoa inteira, esbarrava em FKs `restrict`
+ * (ex.: `validacoes.validador_id`) e ainda assim podia falhar em silêncio
+ * sob RLS, mantendo o vínculo no banco.
+ */
+export async function removerMembro(equipeId: string, perfilId: string): Promise<void> {
+  const { data, error } = await supabase()
+    .from('membros_equipe')
+    .delete()
+    .eq('equipe_id', equipeId)
+    .eq('perfil_id', perfilId)
+    .select('id');
+  if (error) throw new Error(traduzirErro(error.message, 'Não foi possível remover o membro.'));
+  if (!data?.length) {
+    throw new Error('Nenhum vínculo removido. Verifique sua permissão de administrador.');
+  }
 }
 
 /**
@@ -297,6 +315,19 @@ export async function criarLocal(input: CriarLocalInput): Promise<Local> {
   return local;
 }
 
+/** Atualiza os dados cadastrais do local (as seções ficam na página do local). */
+export async function atualizarLocal(input: AtualizarLocalInput): Promise<void> {
+  const { error } = await supabase()
+    .from('locais')
+    .update({
+      zona: input.zona,
+      nome: input.nome.trim(),
+      endereco: input.endereco?.trim() || null,
+    })
+    .eq('id', input.id);
+  if (error) throw new Error(traduzirErro(error.message, 'Não foi possível atualizar o local.'));
+}
+
 export async function adicionarSecao(localId: string, numero: number): Promise<void> {
   const { error } = await supabase()
     .from('secoes')
@@ -327,6 +358,56 @@ export async function criarEscala(input: CriarEscalaInput): Promise<void> {
 export async function removerEscala(id: string): Promise<void> {
   const { error } = await supabase().from('cronograma').delete().eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Atualiza uma escala. Quando a edição troca o local, a linha é recriada
+ * (insere a nova antes de remover a antiga) para disparar o trigger
+ * `tg_cronograma_materializa` — ele materializa os itens do checklist das
+ * seções do novo local, o que um `update` simples não faria.
+ */
+export async function atualizarEscala(
+  id: string,
+  input: CriarEscalaInput,
+  localAnteriorId: string,
+): Promise<void> {
+  const sb = supabase();
+  const mensagemDuplicado =
+    'Já existe uma escala para esta equipe, local, data e etapa.';
+
+  if (input.local_id !== localAnteriorId) {
+    const { error: erroInserir } = await sb.from('cronograma').insert({
+      data: input.data,
+      etapa: input.etapa,
+      equipe_id: input.equipe_id,
+      local_id: input.local_id,
+      ordem: input.ordem,
+    });
+    if (erroInserir) {
+      throw new Error(traduzirErro(erroInserir.message, mensagemDuplicado));
+    }
+    const { error: erroRemover } = await sb.from('cronograma').delete().eq('id', id);
+    if (erroRemover) {
+      throw new Error(
+        traduzirErro(
+          erroRemover.message,
+          'A nova escala foi criada, mas a antiga não pôde ser removida. Exclua-a manualmente.',
+        ),
+      );
+    }
+    return;
+  }
+
+  const { error } = await sb
+    .from('cronograma')
+    .update({
+      data: input.data,
+      etapa: input.etapa,
+      equipe_id: input.equipe_id,
+      ordem: input.ordem,
+    })
+    .eq('id', id);
+  if (error) throw new Error(traduzirErro(error.message, mensagemDuplicado));
 }
 
 /** Mensagens do Supabase Auth traduzidas para o operador. */

@@ -871,7 +871,7 @@ export function SecaoDetalhe() {
                 <DialogDescription>
                   {foto.numero != null ? `Foto #${foto.numero} · ` : ''}
                   {foto.capturada ?? 'Data não informada'}
-                  {foto.coords ? ` · ${foto.coords}` : ''} · Pressione Esc para fechar
+                  {foto.coords ? ` · ${foto.coords}` : ''}
                 </DialogDescription>
               </div>
               <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-muted p-3">

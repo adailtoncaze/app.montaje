@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { LoaderCircle, TriangleAlert } from 'lucide-react';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { adicionarSecao, criarLocal } from '@/lib/cadastros';
+import { adicionarSecao, atualizarLocal, criarLocal } from '@/lib/cadastros';
 import { mensagemDeErro } from '@/lib/avisos';
 
 /**
@@ -189,6 +189,150 @@ export function DialogoNovoLocal({ aberto, onFechar }: { aberto: boolean; onFech
           <Button type="submit" disabled={enviando}>
             {enviando && <LoaderCircle className="animate-spin" />}
             Cadastrar local
+          </Button>
+        </div>
+      </form>
+    </DialogoBase>
+  );
+}
+
+/** Dados cadastrais editáveis do local (as seções ficam na página do local). */
+export interface LocalEditavel {
+  id: string;
+  zona: number;
+  nome: string;
+  endereco: string | null;
+}
+
+/** Edita zona, nome e endereço de um local já cadastrado. */
+export function DialogoEditarLocal({
+  local,
+  aberto,
+  onFechar,
+}: {
+  local: LocalEditavel;
+  aberto: boolean;
+  onFechar: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [zona, setZona] = useState(String(local.zona));
+  const [nome, setNome] = useState(local.nome);
+  const [endereco, setEndereco] = useState(local.endereco ?? '');
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Preenche com os dados atuais toda vez que o diálogo abre, sem deixar o
+  // estado de uma edição anterior vazando para a próxima.
+  useEffect(() => {
+    if (!aberto) return;
+    setZona(String(local.zona));
+    setNome(local.nome);
+    setEndereco(local.endereco ?? '');
+    setErro(null);
+  }, [aberto, local]);
+
+  function fechar() {
+    if (enviando) return;
+    onFechar();
+  }
+
+  async function enviar(evento: FormEvent) {
+    evento.preventDefault();
+
+    const zonaValor = Number(zona);
+    if (!Number.isInteger(zonaValor) || zonaValor < 1) {
+      setErro('Informe a zona como um número inteiro maior que zero.');
+      return;
+    }
+    if (nome.trim().length < 3) {
+      setErro('Informe o nome do local.');
+      return;
+    }
+
+    setErro(null);
+    setEnviando(true);
+    try {
+      await atualizarLocal({
+        id: local.id,
+        zona: zonaValor,
+        nome,
+        endereco: endereco.trim() || null,
+      });
+      toast.success('Local atualizado', {
+        description: 'Zona, nome e endereço foram salvos.',
+      });
+      fechar();
+      await queryClient.invalidateQueries({ queryKey: ['secoes'] });
+      await queryClient.invalidateQueries({ queryKey: ['locais-cadastro'] });
+    } catch (causa) {
+      const mensagem = mensagemDeErro(causa, 'Não foi possível atualizar o local.');
+      setErro(mensagem);
+      toast.error('Não foi possível atualizar', { description: mensagem });
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <DialogoBase
+      titulo="Editar local de votação"
+      descricao={'As seções do local são gerenciadas na página do local, em "Nova seção".'}
+      aberto={aberto}
+      onFechar={fechar}
+    >
+      <form onSubmit={enviar} className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto p-5" noValidate>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="editar-local-zona">Zona</Label>
+          <Input
+            id="editar-local-zona"
+            type="number"
+            min={1}
+            placeholder="ex.: 1"
+            value={zona}
+            onChange={(e) => setZona(e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="editar-local-nome">Nome do local</Label>
+          <Input
+            id="editar-local-nome"
+            placeholder="Escola Municipal"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="editar-local-endereco">Endereço (opcional)</Label>
+          <Input
+            id="editar-local-endereco"
+            placeholder="Rua, número"
+            value={endereco}
+            onChange={(e) => setEndereco(e.target.value)}
+          />
+        </div>
+
+        {erro && (
+          <Alert variant="destructive">
+            <AlertIcon>
+              <TriangleAlert />
+            </AlertIcon>
+            <div className="flex flex-col gap-1">
+              <AlertTitle>Confira os dados</AlertTitle>
+              <AlertDescription>{erro}</AlertDescription>
+            </div>
+          </Alert>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={fechar} disabled={enviando}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={enviando}>
+            {enviando && <LoaderCircle className="animate-spin" />}
+            Salvar alterações
           </Button>
         </div>
       </form>

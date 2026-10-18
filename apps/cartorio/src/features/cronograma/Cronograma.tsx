@@ -1,10 +1,11 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
   CalendarPlus,
   LoaderCircle,
   MapPin,
+  Pencil,
   Plus,
   RefreshCw,
   Trash2,
@@ -40,6 +41,7 @@ import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/stat-card';
 import { mensagemDeErro, useAvisoErro } from '@/lib/avisos';
 import {
+  atualizarEscala,
   criarEscala,
   removerEscala,
   useCronograma,
@@ -69,6 +71,7 @@ export function Cronograma() {
   const [filtroEquipe, setFiltroEquipe] = useState('todas');
   const [periodo, setPeriodo] = useState<Periodo>('todos');
   const [criando, setCriando] = useState(false);
+  const [editando, setEditando] = useState<EscalaDetalhe | null>(null);
 
   const escalas = data ?? [];
 
@@ -150,7 +153,7 @@ export function Cronograma() {
       </div>
 
       <Card>
-        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
           <div className="sm:flex-1">
             <Label htmlFor="filtro-equipe" className="sr-only">
               Filtrar por equipe
@@ -234,18 +237,26 @@ export function Cronograma() {
         />
       )}
 
-      {!isLoading &&
-        !error &&
-        grupos.map((grupo) => (
-          <CartaoDia
-            key={grupo.data}
-            data={grupo.data}
-            escalas={grupo.lista}
-            podeRemover={podeEditar}
-          />
-        ))}
+      {!isLoading && !error && grupos.length > 0 && (
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+          {grupos.map((grupo) => (
+            <CartaoDia
+              key={grupo.data}
+              data={grupo.data}
+              escalas={grupo.lista}
+              podeRemover={podeEditar}
+              onEditar={setEditando}
+            />
+          ))}
+        </div>
+      )}
 
-      <DialogoNovaEscala aberto={criando} onFechar={() => setCriando(false)} />
+      <DialogoEscala aberto={criando} onFechar={() => setCriando(false)} />
+      <DialogoEscala
+        escala={editando}
+        aberto={editando !== null}
+        onFechar={() => setEditando(null)}
+      />
     </div>
   );
 }
@@ -278,10 +289,12 @@ function CartaoDia({
   data,
   escalas,
   podeRemover,
+  onEditar,
 }: {
   data: string;
   escalas: EscalaDetalhe[];
   podeRemover: boolean;
+  onEditar: (escala: EscalaDetalhe) => void;
 }) {
   const relativo = diasAteHoje(data);
   const hoje = relativo === 0;
@@ -381,6 +394,23 @@ function CartaoDia({
                         type="button"
                         variant="ghost"
                         size="icon"
+                        onClick={() => onEditar(escala)}
+                        aria-label="Editar escala"
+                      >
+                        <Pencil />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Editar escala</TooltipContent>
+                  </Tooltip>
+                )}
+
+                {podeRemover && removendoId !== escala.id && confirmandoId !== escala.id && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setConfirmandoId(escala.id)}
                         aria-label="Remover escala"
                       >
@@ -401,21 +431,44 @@ function CartaoDia({
 
 // ------------------------------------------------------------------ diálogo
 
-function DialogoNovaEscala({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
+function DialogoEscala({
+  escala = null,
+  aberto,
+  onFechar,
+}: {
+  /** Escala sendo editada. Ausente (`null`) = criar nova escala. */
+  escala?: EscalaDetalhe | null;
+  aberto: boolean;
+  onFechar: () => void;
+}) {
   const queryClient = useQueryClient();
   const { data: equipes } = useEquipes();
   const { data: locais } = useLocaisCadastro();
 
-  const [data, setData] = useState(hojeLocal());
-  const [etapa, setEtapa] = useState<Etapa>(1);
-  const [equipeId, setEquipeId] = useState('');
-  const [localId, setLocalId] = useState('');
-  const [ordem, setOrdem] = useState('');
+  const [data, setData] = useState(escala?.data ?? hojeLocal());
+  const [etapa, setEtapa] = useState<Etapa>(escala?.etapa ?? 1);
+  const [equipeId, setEquipeId] = useState(escala?.equipe_id ?? '');
+  const [localId, setLocalId] = useState(escala?.local_id ?? '');
+  const [ordem, setOrdem] = useState(escala?.ordem != null ? String(escala.ordem) : '');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const editando = escala !== null;
+
   const listaEquipes = equipes ?? [];
   const listaLocais = locais ?? [];
+
+  // Preenche com os dados da escala toda vez que o diálogo abre, sem deixar o
+  // estado de uma edição anterior vazando para a próxima.
+  useEffect(() => {
+    if (!aberto) return;
+    setData(escala?.data ?? hojeLocal());
+    setEtapa(escala?.etapa ?? 1);
+    setEquipeId(escala?.equipe_id ?? '');
+    setLocalId(escala?.local_id ?? '');
+    setOrdem(escala?.ordem != null ? String(escala.ordem) : '');
+    setErro(null);
+  }, [aberto, escala]);
 
   function fechar() {
     if (enviando) return;
@@ -436,18 +489,32 @@ function DialogoNovaEscala({ aberto, onFechar }: { aberto: boolean; onFechar: ()
     setErro(null);
     setEnviando(true);
     try {
-      await criarEscala({ data, etapa, equipe_id: equipeId, local_id: localId, ordem: ordemValor });
-      toast.success('Escala criada', {
-        description: 'As seções do local já podem ser baixadas pelo app da equipe.',
-      });
+      const input = { data, etapa, equipe_id: equipeId, local_id: localId, ordem: ordemValor };
+      if (editando && escala) {
+        await atualizarEscala(escala.id, input, escala.local_id);
+        toast.success('Escala atualizada', {
+          description: 'Data, etapa, equipe e local foram salvos.',
+        });
+      } else {
+        await criarEscala(input);
+        toast.success('Escala criada', {
+          description: 'As seções do local já podem ser baixadas pelo app da equipe.',
+        });
+      }
       setOrdem('');
       onFechar();
       await queryClient.invalidateQueries({ queryKey: ['cronograma'] });
       await queryClient.invalidateQueries({ queryKey: ['secoes'] });
     } catch (causa) {
-      const mensagem = mensagemDeErro(causa, 'Não foi possível criar a escala.');
+      const mensagem = mensagemDeErro(
+        causa,
+        editando ? 'Não foi possível atualizar a escala.' : 'Não foi possível criar a escala.',
+      );
       setErro(mensagem);
-      toast.error('Não foi possível criar a escala', { description: mensagem });
+      toast.error(
+        editando ? 'Não foi possível atualizar a escala' : 'Não foi possível criar a escala',
+        { description: mensagem },
+      );
     } finally {
       setEnviando(false);
     }
@@ -457,10 +524,11 @@ function DialogoNovaEscala({ aberto, onFechar }: { aberto: boolean; onFechar: ()
     <Dialog open={aberto} onOpenChange={(v) => !v && fechar()}>
       <DialogContent className="max-w-lg p-0">
         <div className="border-b border-border p-5 pr-14">
-          <DialogTitle>Nova escala</DialogTitle>
+          <DialogTitle>{editando ? 'Editar escala' : 'Nova escala'}</DialogTitle>
           <DialogDescription>
-            Marca que a equipe monta o local neste dia e etapa. Os itens do checklist são gerados
-            automaticamente.
+            {editando
+              ? 'Ajusta a data, a etapa, a equipe ou o local da escala. Se o local mudar, os itens do checklist são gerados para as seções dele.'
+              : 'Marca que a equipe monta o local neste dia e etapa. Os itens do checklist são gerados automaticamente.'}
           </DialogDescription>
         </div>
 
@@ -564,7 +632,7 @@ function DialogoNovaEscala({ aberto, onFechar }: { aberto: boolean; onFechar: ()
             </Button>
             <Button type="submit" disabled={enviando}>
               {enviando && <LoaderCircle className="animate-spin" />}
-              Criar escala
+              {editando ? 'Salvar alterações' : 'Criar escala'}
             </Button>
           </div>
         </form>
