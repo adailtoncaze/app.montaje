@@ -10,6 +10,7 @@ import { ChecklistEtapa } from '@/features/secoes/ChecklistEtapa';
 import { ResumoEtapa } from '@/features/secoes/ResumoEtapa';
 import { Sincronizacao } from '@/features/sync/Sincronizacao';
 import { Configuracoes } from '@/features/config/Configuracoes';
+import { Manual } from '@/features/ajuda/Manual';
 import { ToasterAvisos } from '@/lib/avisos';
 
 function Protegido({ children }: { children: ReactNode }) {
@@ -46,6 +47,7 @@ export function App() {
           />
           <Route path="/sincronizacao" element={<Sincronizacao />} />
           <Route path="/config" element={<Configuracoes />} />
+          <Route path="/manual" element={<Manual />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/locais" replace />} />

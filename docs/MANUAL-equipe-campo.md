@@ -3,6 +3,10 @@
 Guia rápido para montar as seções e registrar as evidências pelo app.
 Vale para celular e tablet e **funciona sem internet**. Meta: concluir uma seção em até 10 min.
 
+> Este mesmo manual está **dentro dos apps**: no app da equipe em **Ajustes → Manual da equipe**
+> e no painel do cartório em **Ajuda → Manual da equipe**. O conteúdo exibido vem de
+> `packages/core/src/manual.ts` — ao alterar este arquivo, mantenha os dois em sincronia.
+
 ---
 
 ## 1. Antes de sair (com internet)

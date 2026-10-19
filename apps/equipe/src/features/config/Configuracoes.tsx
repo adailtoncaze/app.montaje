@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Radio,
   RadioGroup,
@@ -13,6 +14,7 @@ import {
   ArrowUpload24Regular,
   Delete24Regular,
   Desktop24Regular,
+  DocumentText24Regular,
   HardDrive24Regular,
   Info24Regular,
   Person24Regular,
@@ -98,6 +100,7 @@ function formatarDataHora(iso: string | null): string {
 export function Configuracoes() {
   const c = useClasses();
   const avisos = useAvisos();
+  const navigate = useNavigate();
   const perfil = useSessao((s) => s.perfil);
   const definirPerfil = useSessao((s) => s.definirPerfil);
   const { tema, definirTema, modoSol, definirModoSol } = useTema();
@@ -316,6 +319,18 @@ export function Configuracoes() {
         </Cartao>
 
         <ModelosLayout />
+
+        <Cartao
+          inicio={
+            <Medalhao tom="marca">
+              <DocumentText24Regular />
+            </Medalhao>
+          }
+          titulo="Manual da equipe"
+          descricao="Guia rápido de campo: antes de sair, montagem, fotos e envio."
+          clicavel
+          onClick={() => navigate('/manual')}
+        />
 
         <Cartao titulo="Dados no aparelho">
           <div className={c.dados}>

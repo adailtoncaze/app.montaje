@@ -10,6 +10,7 @@ import { Equipes } from '@/features/equipes/Equipes';
 import { Cronograma } from '@/features/cronograma/Cronograma';
 import { SecaoDetalhe } from '@/features/secoes/SecaoDetalhe';
 import { AppEquipe } from '@/features/app-equipe/AppEquipe';
+import { Manual } from '@/features/ajuda/Manual';
 
 function Protegido({ children }: { children: ReactNode }) {
   const perfil = useSessao((s) => s.perfil);
@@ -35,6 +36,7 @@ export function App() {
         <Route path="/equipes" element={<Equipes />} />
         <Route path="/cronograma" element={<Cronograma />} />
         <Route path="/app-equipe" element={<AppEquipe />} />
+        <Route path="/manual" element={<Manual />} />
         {/* Rota antiga: mantém compatibilidade com links já compartilhados. */}
         <Route path="/secoes" element={<Navigate to="/locais" replace />} />
       </Route>

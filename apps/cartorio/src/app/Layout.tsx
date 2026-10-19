@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
+  BookOpen,
   CalendarDays,
   Check,
   ChevronDown,
@@ -68,6 +69,10 @@ const NAVEGACAO: GrupoNavegacao[] = [
       { to: '/cronograma', rotulo: 'Cronograma', icone: CalendarDays, exato: false },
     ],
   },
+  {
+    rotulo: 'Ajuda',
+    itens: [{ to: '/manual', rotulo: 'Manual da equipe', icone: BookOpen, exato: false }],
+  },
 ];
 
 const OPCOES_TEMA: { valor: ModoTema; rotulo: string; icone: LucideIcon }[] = [
@@ -100,6 +105,8 @@ function migalhasDaRota(pathname: string): ItemBreadcrumb[] {
     migalhas.push({ rotulo: 'Cronograma' });
   } else if (segmentos[0] === 'app-equipe') {
     migalhas.push({ rotulo: 'App da equipe' });
+  } else if (segmentos[0] === 'manual') {
+    migalhas.push({ rotulo: 'Manual da equipe' });
   }
 
   return migalhas;

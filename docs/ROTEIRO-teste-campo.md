@@ -126,6 +126,8 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
   - ✅ As imagens abrem e ampliam, e continuam acessíveis **sem internet**.
 - [ ] **A**: entrar em uma seção → **Ver modelos de montagem** (também na **Etapa 1**).
   - ✅ Os modelos abrem em diálogo, sem sair da tela de trabalho.
+- [ ] **A**: Ajustes → **Manual da equipe** → abrir e rolar até o fim.
+  - ✅ O manual abre dentro do app, **sem internet**, com os passo a passos do campo.
 
 ### Fase 10 — Resiliência (o que mais importa em campo)
 - [ ] **A**: durante o preenchimento, **fechar o app** (ou "matar" pelo gerenciador) e reabrir.
@@ -142,6 +144,8 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
 ### Fase 11 — Encerramento
 - [ ] **[C]**: confirmar que todas as seções do teste aparecem corretamente no painel
       (Fotos, respostas, desvios, histórico de validações).
+- [ ] **[C]**: abrir **Manual da equipe** no painel (menu lateral → **Ajuda**) e conferir o
+      mesmo conteúdo do manual do app.
 - [ ] Preencher a **folha de registro** (seção 6) e arquivar prints dos erros.
 
 ---

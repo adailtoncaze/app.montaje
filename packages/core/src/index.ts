@@ -4,3 +4,4 @@ export * from './status-machine';
 export * from './storage-paths';
 export * from './schemas';
 export * from './sigilo';
+export * from './manual';
