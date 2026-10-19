@@ -4,6 +4,7 @@ import type {
   Papel,
   StatusEtapa,
   StatusItem,
+  StatusValidacao,
   TipoItem,
   Vinculo,
 } from './enums';
@@ -136,7 +137,7 @@ export interface Validacao {
   secao_id: string;
   validador_id: string;
   etapa: Etapa;
-  status: Extract<StatusEtapa, 'aprovada' | 'correcao_solicitada'>;
+  status: StatusValidacao;
   comentario: string | null;
   item_devolvido: string | null;
   data: string;

@@ -198,7 +198,11 @@ export function SecaoDetalhe() {
   // Só aparece enquanto a etapa está realmente devolvida — some ao reenviar/aprovar.
   const correcaoDe = (etapa: Etapa) =>
     validacoes
-      .filter((v) => v.etapa === etapa && v.status === 'correcao_solicitada')
+      .filter(
+        (v) =>
+          v.etapa === etapa &&
+          (v.status === 'correcao_solicitada' || v.status === 'reabertura'),
+      )
       .sort((a, b) => (a.data < b.data ? 1 : -1))[0];
   const statusDaEtapa = (etapa: Etapa) =>
     etapa === 1 ? secao.status_etapa1 : secao.status_etapa2;
@@ -232,7 +236,11 @@ export function SecaoDetalhe() {
             <Aviso
               key={etapa}
               tom="erro"
-              titulo={`Etapa ${etapa} devolvida para correção`}
+              titulo={
+                correcao.status === 'reabertura'
+                  ? `Etapa ${etapa} reaberta pelo cartório`
+                  : `Etapa ${etapa} devolvida para correção`
+              }
             >
               {nomeItem(correcao.item_devolvido) && (
                 <Text size={200} weight="semibold" block>

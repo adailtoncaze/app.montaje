@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type {
   Desvio,
   Evidencia,
+  Etapa,
   ItemChecklist,
   RespostaSigilo,
   Secao,
@@ -372,6 +373,28 @@ export async function validarSecao(
       comentario: input.comentario?.trim() || null,
       item_devolvido: input.item_devolvido || null,
     });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Reabre uma etapa aprovada (regra de negócio da reabertura).
+ *
+ * A RPC `rpc_reabrir_etapa` valida tudo no servidor numa única transação:
+ * permissão (somente cartório), origem `aprovada`, motivo obrigatório e a
+ * cascata da regra 5 (reabrir a Etapa 1 reabre a Etapa 2, se iniciada).
+ * A etapa volta para `correcao_solicitada` e o motivo fica gravado em
+ * `validacoes` com status `reabertura` (auditoria).
+ */
+export async function reabrirEtapa(
+  secaoId: string,
+  etapa: Etapa,
+  motivo: string,
+): Promise<void> {
+  const { error } = await supabase().rpc('rpc_reabrir_etapa', {
+    p_secao: secaoId,
+    p_etapa: etapa,
+    p_motivo: motivo.trim(),
+  });
   if (error) throw new Error(error.message);
 }
 

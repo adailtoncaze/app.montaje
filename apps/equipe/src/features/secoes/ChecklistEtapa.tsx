@@ -109,7 +109,11 @@ export function ChecklistEtapa() {
   const correcao =
     statusEtapa === 'correcao_solicitada'
       ? [...validacoes]
-          .filter((v) => v.etapa === etapa && v.status === 'correcao_solicitada')
+          .filter(
+            (v) =>
+              v.etapa === etapa &&
+              (v.status === 'correcao_solicitada' || v.status === 'reabertura'),
+          )
           .sort((a, b) => b.data.localeCompare(a.data))[0]
       : undefined;
   const itemDevolvido = correcao?.item_devolvido
@@ -143,7 +147,14 @@ export function ChecklistEtapa() {
         ) : (
           <>
             {correcao && (
-              <Aviso tom="erro" titulo="Correção solicitada pelo cartório">
+              <Aviso
+                tom="erro"
+                titulo={
+                  correcao.status === 'reabertura'
+                    ? 'Etapa reaberta pelo cartório'
+                    : 'Correção solicitada pelo cartório'
+                }
+              >
                 {itemDevolvido && (
                   <Text size={200} weight="semibold" block>
                     Item a corrigir: {itemDevolvido}

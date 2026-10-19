@@ -52,6 +52,7 @@ import { Progresso } from '@/components/progress-bar';
 import {
   ROTULO_MOTIVO,
   ROTULO_STATUS_ETAPA,
+  ROTULO_STATUS_VALIDACAO,
   type Desvio,
   type Etapa,
   type Evidencia,
@@ -60,6 +61,7 @@ import {
   type ValidacaoInput,
 } from '@montaje/core';
 import {
+  reabrirEtapa,
   useSecao,
   validarSecao,
   type SecaoDetalhe as DetalheSecao,
@@ -281,6 +283,8 @@ function PainelValidacao({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const [reabrindo, setReabrindo] = useState(false);
+  const [motivoReabertura, setMotivoReabertura] = useState('');
 
   const itensEtapa = useMemo(
     () => detalhe.itens.filter((item) => item.etapa === etapa),
@@ -353,18 +357,128 @@ function PainelValidacao({
     }
   }
 
+  /** Etapa 1 reaberta também derruba a Etapa 2 (regra 5), se ela já começou. */
+  const cascataEtapa2 = etapa === 1 && detalhe.secao.status_etapa2 !== 'pendente';
+
+  async function reabrir() {
+    setErro(null);
+    setSucesso(null);
+    setEnviando(true);
+    try {
+      await reabrirEtapa(detalhe.secao.id, etapa, motivoReabertura);
+      toast.success('Etapa reaberta', {
+        description: cascataEtapa2
+          ? 'As duas etapas voltaram para correção; a equipe foi notificada.'
+          : 'A equipe foi notificada para revisar e reenviar a etapa.',
+      });
+      setReabrindo(false);
+      setMotivoReabertura('');
+      onValidado();
+    } catch (causa) {
+      const mensagem = mensagemDeErro(causa, 'Falha ao reabrir a etapa.');
+      setErro(mensagem);
+      toast.error('Não foi possível reabrir', { description: mensagem });
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   if (status !== 'enviada') {
     if (status === 'aprovada') {
       return (
-        <Alert variant="success">
-          <AlertIcon>
-            <CircleCheck />
-          </AlertIcon>
-          <AlertDescription>
-            <strong className="block">Etapa {etapa} aprovada</strong>
-            Nenhuma ação pendente nesta etapa.
-          </AlertDescription>
-        </Alert>
+        <>
+          <Alert variant="success">
+            <AlertIcon>
+              <CircleCheck />
+            </AlertIcon>
+            <AlertDescription>
+              <strong className="block">Etapa {etapa} aprovada</strong>
+              Nenhuma ação pendente nesta etapa.
+            </AlertDescription>
+          </Alert>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-fit"
+              onClick={() => setReabrindo(true)}
+            >
+              <RefreshCw />
+              Reabrir etapa
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Reabre a aprovação para a equipe revisar o checklist e reenviar. O motivo fica
+              registrado no histórico.
+              {cascataEtapa2 ? ' A Etapa 2 também será reaberta (regra 5).' : ''}
+            </p>
+          </div>
+
+          <Dialog
+            open={reabrindo}
+            onOpenChange={(aberto) => {
+              if (!aberto) {
+                setReabrindo(false);
+                setErro(null);
+              }
+            }}
+          >
+            <DialogContent className="max-w-lg p-0">
+              <div className="border-b border-border p-5 pr-14">
+                <DialogTitle>Reabrir a Etapa {etapa}?</DialogTitle>
+                <DialogDescription>
+                  A etapa volta para correção e a equipe é notificada para revisar e reenviar.
+                  {cascataEtapa2 ? ' A Etapa 2 também será reaberta.' : ''}
+                </DialogDescription>
+              </div>
+
+              <div className="flex flex-col gap-4 p-5">
+                {erro && (
+                  <Alert variant="destructive">
+                    <AlertIcon>
+                      <TriangleAlert />
+                    </AlertIcon>
+                    <AlertDescription>{erro}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <Label htmlFor="motivo-reabertura">Motivo da reabertura</Label>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {motivoReabertura.length}/{LIMITE_COMENTARIO}
+                    </span>
+                  </div>
+                  <Textarea
+                    id="motivo-reabertura"
+                    value={motivoReabertura}
+                    maxLength={LIMITE_COMENTARIO}
+                    placeholder="Ex.: a urna foi movida após a aprovação; reanálise da foto 2."
+                    onChange={(e) => setMotivoReabertura(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    disabled={enviando}
+                    onClick={() => setReabrindo(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={enviando || motivoReabertura.trim().length < 5}
+                    onClick={reabrir}
+                  >
+                    <RefreshCw />
+                    Reabrir etapa
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
       );
     }
     if (status === 'correcao_solicitada') {
@@ -577,6 +691,7 @@ function Historico({
         <ol className="flex flex-col gap-5">
           {validacoes.map((v, indice) => {
             const aprovada = v.status === 'aprovada';
+            const reabertura = v.status === 'reabertura';
             const ultima = indice === validacoes.length - 1;
             return (
               <li key={v.id} className="relative flex gap-3">
@@ -589,11 +704,17 @@ function Historico({
                 <span
                   className={cn(
                     'z-10 mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full',
-                    aprovada ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger',
+                    aprovada
+                      ? 'bg-success-bg text-success'
+                      : reabertura
+                        ? 'bg-warning-bg text-warning'
+                        : 'bg-danger-bg text-danger',
                   )}
                 >
                   {aprovada ? (
                     <CircleCheck className="size-4" />
+                  ) : reabertura ? (
+                    <RefreshCw className="size-4" />
                   ) : (
                     <TriangleAlert className="size-4" />
                   )}
@@ -601,7 +722,7 @@ function Historico({
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-sm font-semibold text-foreground">
-                      Etapa {v.etapa} · {ROTULO_STATUS_ETAPA[v.status]}
+                      Etapa {v.etapa} · {ROTULO_STATUS_VALIDACAO[v.status]}
                     </span>
                     <span className="text-xs tabular-nums text-muted-foreground">
                       {new Date(v.data).toLocaleString('pt-BR')}

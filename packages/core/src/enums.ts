@@ -12,6 +12,9 @@ export type StatusEtapa =
 
 export type StatusItem = 'pendente' | 'conforme' | 'nao_conforme';
 
+/** Decisão do cartório registrada em `validacoes` (trilha de auditoria). */
+export type StatusValidacao = 'aprovada' | 'correcao_solicitada' | 'reabertura';
+
 export type TipoItem = 'confirmacao' | 'foto';
 
 export type MotivoDesvio =
@@ -29,6 +32,12 @@ export const ROTULO_STATUS_ETAPA: Record<StatusEtapa, string> = {
   enviada: 'Enviada',
   aprovada: 'Aprovada',
   correcao_solicitada: 'Correção solicitada',
+};
+
+export const ROTULO_STATUS_VALIDACAO: Record<StatusValidacao, string> = {
+  aprovada: 'Aprovada',
+  correcao_solicitada: 'Correção solicitada',
+  reabertura: 'Reabertura',
 };
 
 export const ROTULO_MOTIVO: Record<MotivoDesvio, string> = {

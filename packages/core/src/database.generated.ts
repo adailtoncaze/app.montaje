@@ -497,7 +497,7 @@ export type Database = {
           id: string
           item_devolvido: string | null
           secao_id: string
-          status: Database["public"]["Enums"]["status_etapa"]
+          status: Database["public"]["Enums"]["status_validacao"]
           validador_id: string
         }
         Insert: {
@@ -507,7 +507,7 @@ export type Database = {
           id?: string
           item_devolvido?: string | null
           secao_id: string
-          status: Database["public"]["Enums"]["status_etapa"]
+          status: Database["public"]["Enums"]["status_validacao"]
           validador_id: string
         }
         Update: {
@@ -517,7 +517,7 @@ export type Database = {
           id?: string
           item_devolvido?: string | null
           secao_id?: string
-          status?: Database["public"]["Enums"]["status_etapa"]
+          status?: Database["public"]["Enums"]["status_validacao"]
           validador_id?: string
         }
         Relationships: [
@@ -563,6 +563,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      rpc_materializar_secao: { Args: { p_secao: string }; Returns: undefined }
+      rpc_reabrir_etapa: {
+        Args: { p_etapa: number; p_motivo: string; p_secao: string }
+        Returns: undefined
+      }
     }
     Enums: {
       motivo_desvio:
@@ -578,6 +583,7 @@ export type Database = {
         | "aprovada"
         | "correcao_solicitada"
       status_item: "pendente" | "conforme" | "nao_conforme"
+      status_validacao: "aprovada" | "correcao_solicitada" | "reabertura"
       tipo_item: "confirmacao" | "foto"
       vinculo_usuario: "servidor" | "alvt"
     }
@@ -725,6 +731,7 @@ export const Constants = {
         "correcao_solicitada",
       ],
       status_item: ["pendente", "conforme", "nao_conforme"],
+      status_validacao: ["aprovada", "correcao_solicitada", "reabertura"],
       tipo_item: ["confirmacao", "foto"],
       vinculo_usuario: ["servidor", "alvt"],
     },

@@ -188,7 +188,11 @@ export function ResumoEtapa() {
     Boolean(secao) && itens.length > 0 && !jaEnviada && pendencias.length === 0 && !bloqueioSigilo;
 
   const correcao = [...validacoes]
-    .filter((v) => v.etapa === etapa && v.status === 'correcao_solicitada')
+    .filter(
+      (v) =>
+        v.etapa === etapa &&
+        (v.status === 'correcao_solicitada' || v.status === 'reabertura'),
+    )
     .sort((a, b) => b.data.localeCompare(a.data))[0];
   const itemDevolvido = correcao?.item_devolvido
     ? itens.find((i) => i.id === correcao.item_devolvido)?.nome ?? null
@@ -230,7 +234,14 @@ export function ResumoEtapa() {
             )}
 
             {correcao && !jaEnviada && (
-              <Aviso tom="erro" titulo="Correção solicitada pelo cartório">
+              <Aviso
+                tom="erro"
+                titulo={
+                  correcao.status === 'reabertura'
+                    ? 'Etapa reaberta pelo cartório'
+                    : 'Correção solicitada pelo cartório'
+                }
+              >
                 {itemDevolvido && (
                   <Text size={200} weight="semibold" block>
                     Item a corrigir: {itemDevolvido}

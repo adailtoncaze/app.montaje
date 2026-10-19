@@ -176,6 +176,27 @@ export function Inicio() {
     );
   }, [locais]);
 
+  /** Aprovações invalidadas pela regra 1: sigilo "não" que chegou depois da aprovação. */
+  const aprovadasNaoConformes = useMemo(
+    () =>
+      locais.flatMap((local) =>
+        local.secoes
+          .filter(
+            (s) =>
+              !s.conforme &&
+              (s.status_etapa1 === 'aprovada' || s.status_etapa2 === 'aprovada'),
+          )
+          .map((s) => ({
+            id: s.id,
+            localId: local.id,
+            numero: s.numero,
+            localNome: local.nome,
+            zona: local.zona,
+          })),
+      ),
+    [locais],
+  );
+
   const pendencia =
     totais.naoConformes > 0
       ? { tom: 'danger' as const, texto: `${totais.naoConformes} com sigilo não conforme` }
@@ -256,6 +277,38 @@ export function Inicio() {
           carregando={isLoading}
         />
       </div>
+
+      {!isLoading && aprovadasNaoConformes.length > 0 && (
+        <Alert variant="destructive">
+          <AlertIcon>
+            <ShieldAlert />
+          </AlertIcon>
+          <div className="flex flex-col gap-1">
+            <AlertTitle>
+              {aprovadasNaoConformes.length} seção(ões) aprovada(s) com sigilo do voto não
+              conforme
+            </AlertTitle>
+            <AlertDescription>
+              <span className="block">
+                A regra 1 (eliminatória) invalida a aprovação: reabra as etapas para a equipe
+                corrigir.
+              </span>
+              <ul className="mt-2 flex flex-col gap-1">
+                {aprovadasNaoConformes.map((s) => (
+                  <li key={s.id}>
+                    <Link
+                      to={`/locais/${s.localId}/secoes/${s.id}`}
+                      className="font-medium underline underline-offset-2 transition-colors hover:text-foreground"
+                    >
+                      Seção {s.numero} · {s.localNome} ({s.zona}ª zona)
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </div>
+        </Alert>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Card>
