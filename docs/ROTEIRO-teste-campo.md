@@ -112,13 +112,15 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
   - ✅ Aparece o aviso **"Etapa reaberta pelo cartório"**.
 - [ ] **A**: revisar o checklist (dados/fotos permanecem) e reenviar.
 
-### Fase 9 — Qualidade da foto (APP-15) e modo sol (APP-28)
+### Fase 9 — Recursos de apoio (APP-15, APP-28 e modelos)
 - [ ] **A** (ainda offline): tirar uma foto **sem foco** (mão tremendo) ou com a **lente tampada**.
   - ✅ O app avisa que a foto parece *escura*/*borrada* e oferece **Refazer** ou **Salvar assim mesmo**.
   - ✅ Nada é gravado antes da escolha.
 - [ ] **A**: tocar **Salvar assim mesmo** e conferir que a foto ficou registrada normalmente.
 - [ ] **A**: Ajustes → **Uso sob o sol** → ligar o **Modo sol** e conferir a leitura na rua.
   - ✅ Fundo branco, textos e contornos bem mais escuros; a preferência fica salva.
+- [ ] **A**: Ajustes → **Modelos de montagem** → ampliar cada um dos 3 modelos.
+  - ✅ As imagens abrem e ampliam, e continuam acessíveis **sem internet**.
 
 ### Fase 10 — Resiliência (o que mais importa em campo)
 - [ ] **A**: durante o preenchimento, **fechar o app** (ou "matar" pelo gerenciador) e reabrir.

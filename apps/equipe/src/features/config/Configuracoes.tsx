@@ -51,6 +51,7 @@ import {
 import { supabase, supabaseConfigurado } from '@/lib/supabase';
 import { CartaoInstalar } from '@/features/pwa/CartaoInstalar';
 import { useInstalarPWA } from '@/features/pwa/useInstalarPWA';
+import { ModelosLayout } from '@/features/layout/ModelosLayout';
 import {
   baixarDadosDoDia,
   ultimaSincronizacao,
@@ -313,6 +314,8 @@ export function Configuracoes() {
             </Text>
           </div>
         </Cartao>
+
+        <ModelosLayout />
 
         <Cartao titulo="Dados no aparelho">
           <div className={c.dados}>
