@@ -103,7 +103,7 @@ export const MANUAL_EQUIPE_CAMPO: Manual = {
         {
           tipo: 'paragrafo',
           texto:
-            'Confira o modelo em **Ver modelos de montagem** (na seção ou na própria etapa) e fotografe o ambiente conforme o arranjo.',
+            'Confira o modelo em **Ajustes → Modelos de montagem** e fotografe o ambiente conforme o arranjo.',
         },
       ],
     },

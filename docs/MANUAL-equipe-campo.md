@@ -34,7 +34,7 @@ Vale para celular e tablet e **funciona sem internet**. Meta: concluir uma seç�
 > A **Etapa 2** só libera depois que o cartório aprovar a Etapa 1.
 
 **Etapa 1 — Layout, cartazes e posição da urna (fotos 1 a 3)**
-Confira o modelo em **Ver modelos de montagem** (na seção ou na própria etapa) e fotografe o ambiente.
+Confira o modelo em **Ajustes → Modelos de montagem** e fotografe o ambiente.
 
 **Etapa 2 — Instalação da urna e sigilo do voto (foto 4)**
 Responda as perguntas eliminatórias do **Sigilo do voto**. Qualquer "Não" deixa a seção **não conforme** e exige **Registrar desvio** no item.

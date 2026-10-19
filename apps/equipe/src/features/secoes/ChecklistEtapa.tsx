@@ -26,7 +26,6 @@ import { ItemConfirmacao } from './ItemConfirmacao';
 import { ItemFoto } from './ItemFoto';
 import { ReferenciaEtapa1 } from './ReferenciaEtapa1';
 import { SigiloEtapa } from './SigiloEtapa';
-import { BotaoVerModelos } from '@/features/layout/ModelosLayout';
 
 const useClasses = makeStyles({
   resumo: {
@@ -177,8 +176,6 @@ export function ChecklistEtapa() {
               Enquadre apenas o ambiente da seção: cartazes, mesa dos mesários e o local da
               urna/cabine. As fotos são obrigatórias e preservam o sigilo do voto.
             </Aviso>
-
-            {etapa === 1 && <BotaoVerModelos larguraTotal />}
 
             {etapa === 2 && <ReferenciaEtapa1 secaoId={secaoId} />}
 
