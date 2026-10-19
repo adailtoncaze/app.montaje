@@ -10,37 +10,86 @@ import { Aviso, Botao } from '@montaje/ui';
  * sistema; para liberar RAM, o Android mata a aba do PWA e, ao voltar, o app reinicia
  * do zero ("devido a insuficiencia de memoria...") — a foto se perde. Usando
  * `getUserMedia` a captura acontece na propria pagina, sem troca de app.
+ *
+ * Layout de tela cheia: o `<video>` ocupa 100% da area (`object-fit: contain`, que
+ * e exatamente o que a camera enxerga) e os controles ficam sobrepostos, sem ocupar
+ * espaco — antes, cabecalho/rodape/padding mais o teto de `70vh` deixavam o
+ * preview minusculo quando o celular era girado para a horizontal.
  */
 
 /** Limite do maior lado ao capturar; o pipeline de compressao normaliza depois. */
 const LADO_MAX_CAPTURA = 1920;
+/** Fracao da moldura em relacao a imagem prevista (so enquadramento decorativo). */
+const ESCALA_GUIA = 0.92;
 
 const useClasses = makeStyles({
   fundo: {
     position: 'fixed',
     inset: 0,
     zIndex: 1000,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
+    overflow: 'hidden',
     boxSizing: 'border-box',
-    paddingTop: `calc(${tokens.spacingVerticalM} + env(safe-area-inset-top, 0px))`,
-    paddingBottom: `calc(${tokens.spacingVerticalM} + env(safe-area-inset-bottom, 0px))`,
-    paddingLeft: tokens.spacingHorizontalM,
-    paddingRight: tokens.spacingHorizontalM,
-    backgroundColor: tokens.colorNeutralBackgroundStatic,
+    padding: 0,
+    backgroundColor: '#000000',
     color: tokens.colorNeutralForegroundStaticInverted,
   },
+  /** Ocupa a tela inteira; `contain` mantem a proporcao sem cortar nada. */
+  video: {
+    position: 'absolute',
+    inset: 0,
+    display: 'block',
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    backgroundColor: '#000000',
+  },
+  /** Moldura sobre a area real da imagem (calculada em `medirMoldura`). */
+  guia: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    boxSizing: 'border-box',
+    border: `2px dashed ${tokens.colorNeutralForegroundStaticInverted}`,
+    borderRadius: tokens.borderRadiusLarge,
+    opacity: 0.4,
+    pointerEvents: 'none',
+  },
   topo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 3,
+    boxSizing: 'border-box',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: tokens.spacingHorizontalM,
-    minHeight: '48px',
+    minHeight: '56px',
+    paddingTop: 'env(safe-area-inset-top, 0px)',
+    paddingLeft: `calc(${tokens.spacingHorizontalM} + env(safe-area-inset-left, 0px))`,
+    paddingRight: `calc(${tokens.spacingHorizontalM} + env(safe-area-inset-right, 0px))`,
+    background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%)',
   },
   titulo: {
     color: tokens.colorNeutralForegroundStaticInverted,
     fontWeight: tokens.fontWeightSemibold,
+  },
+  /**
+   * Dica curta exibida no topo (só na horizontal): no deitado cada linha do
+   * rodapé rouba altura do preview — o texto vai para a faixa do cabeçalho.
+   */
+  dicaReta: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    color: tokens.colorNeutralForegroundStaticInverted,
+    opacity: 0.85,
+    display: 'none',
+    '@media (orientation: landscape)': {
+      display: 'block',
+    },
   },
   fechar: {
     minWidth: '48px',
@@ -56,48 +105,51 @@ const useClasses = makeStyles({
       backgroundColor: 'rgba(255, 255, 255, 0.2)',
     },
   },
-  area: {
-    flexGrow: 1,
+  centro: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 2,
+    boxSizing: 'border-box',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 0,
-  },
-  videoWrap: {
-    position: 'relative',
-    width: '100%',
-    maxWidth: '720px',
-  },
-  video: {
-    display: 'block',
-    width: '100%',
-    maxHeight: '70vh',
-    objectFit: 'contain',
-    borderRadius: tokens.borderRadiusLarge,
-    backgroundColor: tokens.colorNeutralBackgroundStatic,
-  },
-  guia: {
-    position: 'absolute',
-    inset: '6%',
-    borderRadius: tokens.borderRadiusLarge,
-    border: `2px dashed ${tokens.colorNeutralForegroundStaticInverted}`,
-    opacity: 0.45,
-    pointerEvents: 'none',
+    padding: tokens.spacingHorizontalM,
   },
   erro: {
     maxWidth: '520px',
   },
   rodape: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 3,
+    boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: tokens.spacingVerticalM,
+    gap: tokens.spacingVerticalS,
+    paddingTop: tokens.spacingVerticalM,
+    paddingBottom: `calc(${tokens.spacingVerticalM} + env(safe-area-inset-bottom, 0px))`,
+    paddingLeft: `calc(${tokens.spacingHorizontalM} + env(safe-area-inset-left, 0px))`,
+    paddingRight: `calc(${tokens.spacingHorizontalM} + env(safe-area-inset-right, 0px))`,
+    background: 'linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%)',
+    // Deitado, cada linha de texto rouba altura do preview: encolhe o rodape.
+    '@media (orientation: landscape)': {
+      gap: tokens.spacingVerticalXS,
+      paddingTop: 0,
+      paddingBottom: `calc(${tokens.spacingVerticalS} + env(safe-area-inset-bottom, 0px))`,
+    },
   },
   dica: {
     color: tokens.colorNeutralForegroundStaticInverted,
     textAlign: 'center',
     maxWidth: '48ch',
     opacity: 0.85,
+    // Na horizontal a mensagem aparece enxuta no cabeçalho (ver `dicaReta`).
+    '@media (orientation: landscape)': {
+      display: 'none',
+    },
   },
   avisoGirar: {
     color: tokens.colorNeutralForegroundStaticInverted,
@@ -130,6 +182,9 @@ const useClasses = makeStyles({
     justifyContent: 'center',
     gap: tokens.spacingHorizontalL,
     flexWrap: 'wrap',
+    '@media (orientation: landscape)': {
+      gap: tokens.spacingHorizontalM,
+    },
   },
   disparo: {
     width: '76px',
@@ -139,6 +194,12 @@ const useClasses = makeStyles({
     padding: 0,
     borderRadius: '50%',
     boxShadow: `0 0 0 4px rgba(255, 255, 255, 0.35)`,
+    '@media (orientation: landscape)': {
+      width: '64px',
+      height: '64px',
+      minWidth: '64px',
+      minHeight: '64px',
+    },
   },
   secundario: {
     color: tokens.colorNeutralForegroundStaticInverted,
@@ -177,11 +238,14 @@ export function CameraApp({
   aoUsarArquivo: () => void;
 }) {
   const c = useClasses();
+  const fundoRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pronta, setPronta] = useState(false);
   const [capturando, setCapturando] = useState(false);
+  /** Tamanho (px) da moldura sobreposta à imagem prevista. */
+  const [moldura, setMoldura] = useState<{ l: number; a: number } | null>(null);
   /**
    * Orientacao da imagem da camera: evidencia de pe perde metade do enquadramento
    * e atrapalha a leitura no cartorio. O navegador entrega o stream ja girado
@@ -248,6 +312,41 @@ export function CameraApp({
     };
   }, []);
 
+  /**
+   * Recalcula a moldura quando a tela gira ou o stream muda de tamanho: ela
+   * espelha o `object-fit: contain` do vídeo (área realmente visível da imagem).
+   */
+  useEffect(() => {
+    const fundo = fundoRef.current;
+    const video = videoRef.current;
+    if (!fundo || !video) return;
+
+    function medir() {
+      const larguraV = video?.videoWidth ?? 0;
+      const alturaV = video?.videoHeight ?? 0;
+      const larguraC = fundo?.clientWidth ?? 0;
+      const alturaC = fundo?.clientHeight ?? 0;
+      if (!larguraV || !alturaV || !larguraC || !alturaC) {
+        setMoldura(null);
+        return;
+      }
+      const escala = Math.min(larguraC / larguraV, alturaC / alturaV) * ESCALA_GUIA;
+      const l = Math.round(larguraV * escala);
+      const a = Math.round(alturaV * escala);
+      setMoldura((atual) => (atual && atual.l === l && atual.a === a ? atual : { l, a }));
+    }
+
+    medir();
+    video.addEventListener('loadedmetadata', medir);
+    window.addEventListener('resize', medir);
+    window.addEventListener('orientationchange', medir);
+    return () => {
+      video.removeEventListener('loadedmetadata', medir);
+      window.removeEventListener('resize', medir);
+      window.removeEventListener('orientationchange', medir);
+    };
+  }, [erro]);
+
   function capturar() {
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) return;
@@ -286,11 +385,38 @@ export function CameraApp({
   }
 
   return (
-    <div className={c.fundo} role="dialog" aria-modal="true" aria-label="Câmera">
+    <div
+      ref={fundoRef}
+      className={c.fundo}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Câmera"
+    >
+      {!erro && (
+        <>
+          <video
+            ref={videoRef}
+            className={c.video}
+            playsInline
+            muted
+            autoPlay
+            aria-label="Pré-visualização da câmera"
+          />
+          {moldura && (
+            <div className={c.guia} style={{ width: moldura.l, height: moldura.a }} aria-hidden />
+          )}
+        </>
+      )}
+
       <div className={c.topo}>
         <Text className={c.titulo} size={400}>
           Câmera
         </Text>
+        {!erro && !retrato && (
+          <Text className={c.dicaReta} size={200}>
+            Deitado · só o ambiente, sem pessoas
+          </Text>
+        )}
         <Botao
           variante="sutil"
           className={c.fechar}
@@ -300,26 +426,12 @@ export function CameraApp({
         />
       </div>
 
-      {erro ? (
-        <div className={c.area}>
+      {erro && (
+        <div className={c.centro}>
           <div className={c.erro}>
             <Aviso tom="erro" titulo="Câmera indisponível">
               {erro}
             </Aviso>
-          </div>
-        </div>
-      ) : (
-        <div className={c.area}>
-          <div className={c.videoWrap}>
-            <video
-              ref={videoRef}
-              className={c.video}
-              playsInline
-              muted
-              autoPlay
-              aria-label="Pré-visualização da câmera"
-            />
-            <div className={c.guia} aria-hidden />
           </div>
         </div>
       )}

@@ -131,6 +131,8 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
         próxima foto (não libera a vertical para sempre).
 - [ ] **A**: girar o aparelho para a **horizontal** e fotografar.
   - ✅ O disparo volta sozinho e a foto sai deitada.
+  - ✅ A **pré-visualização da câmera fica em tela cheia** (sem barras/molduras do app
+        em cima; os botões flutuam sobre a imagem) e a moldura tracejada acompanha a área.
   - ✅ A prévia do item mostra o **quadro inteiro** (sem cortar a foto).
 - [ ] **A**: fotografar pela **galeria** uma imagem **vertical**.
   - ✅ O app avisa que a foto está *na vertical* e oferece **Refazer** / **Salvar assim mesmo**.
