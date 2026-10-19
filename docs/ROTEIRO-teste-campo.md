@@ -144,6 +144,8 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
       (Fotos, respostas, desvios, histórico de validações).
 - [ ] **[C]**: abrir **Manual da equipe** no painel (menu lateral → **Ajuda**) e conferir o
       mesmo conteúdo do manual do app.
+  - ✅ O botão **Imprimir** gera uma folha legível (fundo branco), sem quebrar seções no meio.
+  - ✅ Imprimir também no **tema escuro** sai em fundo branco (não desperdiça tinta).
 - [ ] Preencher a **folha de registro** (seção 6) e arquivar prints dos erros.
 
 ---

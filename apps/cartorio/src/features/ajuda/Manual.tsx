@@ -1,4 +1,6 @@
+import { Printer } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import { MANUAL_EQUIPE_CAMPO, segmentosNegrito, type BlocoManual } from '@montaje/core';
@@ -24,14 +26,14 @@ function Bloco({ bloco }: { bloco: BlocoManual }) {
   switch (bloco.tipo) {
     case 'paragrafo':
       return (
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground print:break-inside-avoid">
           <TextoMarcado texto={bloco.texto} />
         </p>
       );
 
     case 'destaque':
       return (
-        <Alert variant="warning">
+        <Alert variant="warning" className="print:break-inside-avoid">
           <AlertDescription>
             <TextoMarcado texto={bloco.texto} />
           </AlertDescription>
@@ -49,7 +51,7 @@ function Bloco({ bloco }: { bloco: BlocoManual }) {
           }
         >
           {bloco.itens.map((item) => (
-            <li key={item}>
+            <li key={item} className="print:break-inside-avoid">
               <TextoMarcado texto={item} />
             </li>
           ))}
@@ -63,7 +65,7 @@ function Bloco({ bloco }: { bloco: BlocoManual }) {
           {bloco.linhas.map((linha) => (
             <div
               key={linha.situacao}
-              className="flex flex-col gap-0.5 rounded-lg border border-border bg-muted/40 px-3 py-2"
+              className="flex flex-col gap-0.5 rounded-lg border border-border bg-muted/40 px-3 py-2 print:break-inside-avoid"
             >
               <span className="text-sm font-semibold text-foreground">{linha.situacao}</span>
               <span className="text-sm leading-relaxed text-muted-foreground">
@@ -76,21 +78,34 @@ function Bloco({ bloco }: { bloco: BlocoManual }) {
   }
 }
 
-/** Manual da equipe de campo, para consulta e impressão no painel do cartório. */
+/**
+ * Manual da equipe de campo, para consulta e impressão no painel do cartório.
+ * A classe `manual-impressao` aciona o ajuste de cores para papel (ver
+ * `styles/index.css`), garantindo leitura mesmo com o tema escuro ativo.
+ */
 export function Manual() {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div className="manual-impressao mx-auto flex w-full max-w-3xl flex-col gap-6 print:mx-0 print:max-w-none print:gap-4">
       <PageHeader
         titulo={MANUAL_EQUIPE_CAMPO.titulo}
         descricao="Guia rápido entregue às equipes em campo. No celular, fica disponível dentro do app da equipe, sem internet."
+        acoes={
+          <Button className="print:hidden" onClick={() => window.print()}>
+            <Printer />
+            Imprimir
+          </Button>
+        }
       />
 
-      <Alert variant="info">
+      <Alert variant="info" className="print:break-inside-avoid">
         <AlertDescription>{MANUAL_EQUIPE_CAMPO.resumo}</AlertDescription>
       </Alert>
 
       {MANUAL_EQUIPE_CAMPO.secoes.map((secao) => (
-        <Card key={secao.id}>
+        <Card
+          key={secao.id}
+          className="print:break-inside-avoid print:border-neutral-400 print:shadow-none"
+        >
           <CardHeader>
             <CardTitle>{secao.titulo}</CardTitle>
           </CardHeader>

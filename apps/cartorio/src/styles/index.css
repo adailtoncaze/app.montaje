@@ -279,3 +279,47 @@
     outline-offset: 2px;
   }
 }
+
+/*
+ * Impressão do manual da equipe (apps/cartorio → Ajuda → Manual da equipe).
+ * Força "papel branco" mesmo com o tema escuro ativo: os utilitários do
+ * Tailwind usam os tokens `--*` de forma inline, então redefini-los aqui no
+ * wrapper `.manual-impressao` já recolore os cartões, avisos e listas.
+ */
+@media print {
+  /* Impressão multi-página: `height: 100%` no body/#root pode cortar o conteúdo. */
+  html,
+  body,
+  #root {
+    height: auto;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: #111827;
+  }
+
+  .manual-impressao {
+    --background: #ffffff;
+    --foreground: #111827;
+    --card: #ffffff;
+    --card-foreground: #111827;
+    --muted: #f3f4f6;
+    --muted-foreground: #374151;
+    --border: #9ca3af;
+    --info: #1e3a8a;
+    --info-bg: #ffffff;
+    --info-border: #9ca3af;
+    --warning: #78350f;
+    --warning-bg: #ffffff;
+    --warning-border: #9ca3af;
+
+    color: var(--foreground);
+    background-color: #ffffff;
+  }
+
+  /* Um pouco menos de espaço entre seções para caber melhor na folha. */
+  .manual-impressao > * + * {
+    margin-top: 0.75rem;
+  }
+}
