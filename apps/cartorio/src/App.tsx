@@ -9,6 +9,7 @@ import { LocalDetalhe } from '@/features/locais/LocalDetalhe';
 import { Equipes } from '@/features/equipes/Equipes';
 import { Cronograma } from '@/features/cronograma/Cronograma';
 import { SecaoDetalhe } from '@/features/secoes/SecaoDetalhe';
+import { AppEquipe } from '@/features/app-equipe/AppEquipe';
 
 function Protegido({ children }: { children: ReactNode }) {
   const perfil = useSessao((s) => s.perfil);
@@ -33,6 +34,7 @@ export function App() {
         <Route path="/locais/:localId/secoes/:secaoId" element={<SecaoDetalhe />} />
         <Route path="/equipes" element={<Equipes />} />
         <Route path="/cronograma" element={<Cronograma />} />
+        <Route path="/app-equipe" element={<AppEquipe />} />
         {/* Rota antiga: mantém compatibilidade com links já compartilhados. */}
         <Route path="/secoes" element={<Navigate to="/locais" replace />} />
       </Route>

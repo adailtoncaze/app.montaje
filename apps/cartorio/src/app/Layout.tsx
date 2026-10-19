@@ -12,6 +12,7 @@ import {
   Menu,
   Monitor,
   Moon,
+  QrCode,
   Sun,
   UsersRound,
   X,
@@ -56,6 +57,7 @@ const NAVEGACAO: GrupoNavegacao[] = [
     itens: [
       { to: '/', rotulo: 'Início', icone: House, exato: true },
       { to: '/locais', rotulo: 'Locais de votação', icone: MapPin, exato: false },
+      { to: '/app-equipe', rotulo: 'App da equipe', icone: QrCode, exato: false },
     ],
   },
   {
@@ -96,6 +98,8 @@ function migalhasDaRota(pathname: string): ItemBreadcrumb[] {
     migalhas.push({ rotulo: 'Equipes' });
   } else if (segmentos[0] === 'cronograma') {
     migalhas.push({ rotulo: 'Cronograma' });
+  } else if (segmentos[0] === 'app-equipe') {
+    migalhas.push({ rotulo: 'App da equipe' });
   }
 
   return migalhas;
@@ -292,7 +296,7 @@ export function Layout() {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col border-r border-border bg-sidebar transition-transform duration-200 lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col border-r border-border bg-sidebar transition-transform duration-200 lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:translate-x-0 print:hidden',
           menuAberto ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -301,7 +305,7 @@ export function Layout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Barra móvel: menu (gaveta) + marca + tema */}
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/80 px-3 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/80 px-3 backdrop-blur lg:hidden print:hidden">
           <Button
             variant="ghost"
             size="icon"
@@ -328,13 +332,13 @@ export function Layout() {
         </header>
 
         {/* Barra superior (desktop): apenas o caminho da tela atual. */}
-        <header className="sticky top-0 z-30 hidden h-16 shrink-0 items-center gap-4 border-b border-border bg-background/80 px-6 backdrop-blur lg:flex xl:px-8">
+        <header className="sticky top-0 z-30 hidden h-16 shrink-0 items-center gap-4 border-b border-border bg-background/80 px-6 backdrop-blur lg:flex xl:px-8 print:hidden">
           <div className="flex min-w-0 items-center">
             <ListaMigalhas itens={migalhas} />
           </div>
         </header>
 
-        <main className="w-full flex-1 px-4 py-6 lg:px-8 lg:py-8">
+        <main className="w-full flex-1 px-4 py-6 lg:px-8 lg:py-8 print:p-0">
           <Outlet />
         </main>
       </div>
