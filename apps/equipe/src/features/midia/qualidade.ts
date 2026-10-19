@@ -22,7 +22,10 @@ export const LIMIAR_NITIDEZ = 30;
 /** Limite de tempo da analise — acima disso seguimos sem checar. */
 const TIMEOUT_MS = 8_000;
 
-export type ProblemaFoto = 'escura' | 'clara' | 'borrada';
+export type ProblemaFoto = 'escura' | 'clara' | 'borrada' | 'vertical';
+
+/** Orientacao da foto: `retrato` quando esta em pe (mais alta que larga). */
+export type OrientacaoFoto = 'paisagem' | 'retrato';
 
 export interface QualidadeFoto {
   /** `true` quando nenhum problema foi detectado (ou a analise foi ignorada). */
@@ -32,6 +35,8 @@ export interface QualidadeFoto {
   brilho: number;
   /** Variancia do laplaciano (nitidez). `-1` quando a analise nao rodou. */
   nitidez: number;
+  /** `retrato` quando a imagem esta mais alta que larga. */
+  orientacao: OrientacaoFoto;
 }
 
 /** Texto de cada problema, para compor a mensagem exibida na tela. */
@@ -39,9 +44,16 @@ export const ROTULO_PROBLEMA: Record<ProblemaFoto, string> = {
   escura: 'muito escura',
   clara: 'clara demais (partes estouradas)',
   borrada: 'borrada ou fora de foco',
+  vertical: 'na vertical (gire o aparelho para a horizontal)',
 };
 
-const NEUTRO: QualidadeFoto = { ok: true, problemas: [], brilho: -1, nitidez: -1 };
+const NEUTRO: QualidadeFoto = {
+  ok: true,
+  problemas: [],
+  brilho: -1,
+  nitidez: -1,
+  orientacao: 'paisagem',
+};
 
 /** Corrida contra o relogio — a analise nao pode travar a tela. */
 function comLimite<T>(promessa: Promise<T>, ms: number): Promise<T> {
@@ -145,9 +157,15 @@ function analisarBitmap(bitmap: ImageBitmap): QualidadeFoto {
   const mediaLaplace = contados ? somaLaplace / contados : 0;
   const nitidez = contados ? somaLaplace2 / contados - mediaLaplace * mediaLaplace : 0;
 
+  // A foto em pe perde metade do enquadramento e e o problema que mais atrapalha
+  // a leitura no cartorio — por isso e o primeiro da fila, antes de brilho/foco.
+  const orientacao: OrientacaoFoto = height > width ? 'retrato' : 'paisagem';
+
   // Reporta so o problema mais evidente, para a mensagem nao virar um combo.
   const problemas: ProblemaFoto[] = [];
-  if (brilho < LIMIAR_ESCURO) {
+  if (orientacao === 'retrato') {
+    problemas.push('vertical');
+  } else if (brilho < LIMIAR_ESCURO) {
     problemas.push('escura');
   } else if (fracaoEstouro > LIMIAR_ESTOURO) {
     problemas.push('clara');
@@ -155,7 +173,7 @@ function analisarBitmap(bitmap: ImageBitmap): QualidadeFoto {
     problemas.push('borrada');
   }
 
-  return { ok: problemas.length === 0, problemas, brilho, nitidez };
+  return { ok: problemas.length === 0, problemas, brilho, nitidez, orientacao };
 }
 
 /**

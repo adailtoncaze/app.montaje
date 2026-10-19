@@ -119,12 +119,15 @@ etapa, com fotos e confirmações, tudo **offline** (IndexedDB é a fonte da ver
 - **Checklist da etapa** (`src/features/secoes/ChecklistEtapa.tsx`): lista os itens da etapa
   (fotos e confirmações), com barra de progresso e status. A **Etapa 2** só abre depois da
   aprovação da Etapa 1; caso contrário mostra o motivo do bloqueio.
-- **Fotos** (`ItemFoto.tsx`): a foto é tirada **na hora** (`<input capture="environment">`, abre a
-  câmera do aparelho), com aviso **"Não fotografe pessoas"** e opção de **Refazer/Remover** antes
-  do envio. Guarda data/hora e, quando disponível, a **geolocalização** (até 8s; se falhar, a foto
-  é salva mesmo assim).
-- **Compressão** (`src/features/midia/compressao.ts`): imagem principal em até **1280px**,
-  **JPEG ~70%** e alvo de **≤250KB**, mais uma **miniatura de 320px**. A recompressão também
+- **Fotos** (`ItemFoto.tsx`): a foto é tirada **na hora** pela câmera do app (com fallback para
+  `<input capture="environment">`), com aviso **"Não fotografe pessoas"** e opção de
+  **Refazer/Remover** antes do envio. A câmera **exige o aparelho na horizontal**: em pé o disparo
+  fica travado (com aviso de girar e um atalho de emergência), e fotos verticais vêm da galeria caem
+  no aviso de qualidade (`vertical`). Guarda data/hora e, quando disponível, a **geolocalização**
+  (até 8s; se falhar, a foto é salva mesmo assim).
+- **Compressão** (`src/features/midia/compressao.ts`): imagem principal em até **1920px**,
+  **JPEG ~80%** e alvo de **≤600KB** (piso de qualidade 50% — prioriza detalhe da evidência),
+  mais uma **miniatura de 320px**. A recompressão também
   remove o EXIF. A biblioteca de compressão é carregada **sob demanda** (só ao tirar a primeira
   foto), para não pesar no primeiro acesso pelo celular.
 - **Confirmações** (`ItemConfirmacao.tsx`): **Sim/Não** + observação opcional. Responder move a

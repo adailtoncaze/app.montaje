@@ -80,6 +80,11 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
 
 ### Fase 4 — Aprovação no cartório
 - [ ] **[C]**: abrir a seção enviada → aba *Etapa 1 · Montagem*.
+- [ ] **[C]**: clicar em uma **miniatura de foto** (abre o visualizador).
+  - ✅ O visualizador abre a **foto original** (lista usa a miniatura, visor usa a foto cheia).
+  - ✅ O rodapé informa as dimensões reais (ex.: 1920 × 1440 px) e dá zoom até **100%**
+        sem borrar; o botão **Abrir original** abre o arquivo em outra aba.
+  - ✅ Esc ou clique fora fecha o visualizador.
 - [ ] **[C]**: conferir fotos e respostas → **"Aprovar Etapa 1"**.
   - ✅ Status da Etapa 1 vira "aprovada".
 
@@ -120,6 +125,15 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
   - ✅ O app avisa que a foto parece *escura*/*borrada* e oferece **Refazer** ou **Salvar assim mesmo**.
   - ✅ Nada é gravado antes da escolha.
 - [ ] **A**: tocar **Salvar assim mesmo** e conferir que a foto ficou registrada normalmente.
+- [ ] **A**: com o aparelho **em pé**, abrir a câmera.
+  - ✅ O botão de capturar fica **travado** com o aviso "Gire o aparelho para a horizontal".
+  - ✅ Existe o atalho *Continuar mesmo assim (foto em pé)* — e ele volta a travar na
+        próxima foto (não libera a vertical para sempre).
+- [ ] **A**: girar o aparelho para a **horizontal** e fotografar.
+  - ✅ O disparo volta sozinho e a foto sai deitada.
+  - ✅ A prévia do item mostra o **quadro inteiro** (sem cortar a foto).
+- [ ] **A**: fotografar pela **galeria** uma imagem **vertical**.
+  - ✅ O app avisa que a foto está *na vertical* e oferece **Refazer** / **Salvar assim mesmo**.
 - [ ] **A**: Ajustes → **Uso sob o sol** → ligar o **Modo sol** e conferir a leitura na rua.
   - ✅ Fundo branco, textos e contornos bem mais escuros; a preferência fica salva.
 - [ ] **A**: Ajustes → **Modelos de montagem** → ampliar cada um dos 3 modelos.
@@ -162,6 +176,8 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
 | 6 | Devolução e reabertura aparecem na equipe | Aviso na tela da seção |
 | 7 | Consumo de bateria e espaço ao tirar várias fotos | Celular |
 | 8 | Legibilidade no sol com o **modo sol** ligado | Ajustes · Tela |
+| 9 | Câmera trava em pé e libera na horizontal | Câmera · Prévia do item |
+| 10 | Foto abre cheia no painel, com zoom até 100% | Visualizador (cartório) |
 
 ---
 

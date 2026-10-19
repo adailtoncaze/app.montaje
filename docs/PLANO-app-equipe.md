@@ -65,7 +65,7 @@ IndexedDB é a fonte da verdade em campo; a rede apenas sincroniza.
 | APP-09 | Detalhe da seção (2 etapas; bloqueio da Etapa 2) | APP-08b | P |
 | APP-10 | Visualizador do layout de referência | APP-06 | P |
 | APP-11 | Câmera só captura + aviso "não fotografar pessoas" | APP-09 | P |
-| APP-12 | Compressão 1280px/JPEG70%/≤250KB + miniatura 320px | APP-11 | G |
+| APP-12 | Compressão 1920px/JPEG80%/≤600KB + miniatura 320px | APP-11 | G |
 | APP-13 | Timestamp + geolocalização por foto | APP-12 | P |
 | APP-14 | Refazer antes de confirmar + orientação paisagem | APP-12 | P |
 | APP-15 | Checagem de qualidade (escura/borrada) | APP-12 | P |

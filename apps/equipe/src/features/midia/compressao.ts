@@ -1,8 +1,12 @@
 /**
  * APP-12 — pipeline de imagem das evidencias.
  *
- * Foto principal: no maximo 1280px no maior lado, JPEG ~70% e alvo de ate 250KB.
+ * Foto principal: no maximo 1920px no maior lado, JPEG ~80% e alvo de ate 600KB.
  * Miniatura: 320px, usada nas listas e na previa rapida.
+ *
+ * Resolucao mais alta de proposito: o cartorio valida a evidencia ampliando a
+ * imagem no visualizador, e 1280px ficava pouco para ler textos pequenos a
+ * distancia (ex.: cartazes). 1920px ainda sincroniza bem em 4G.
  *
  * Por que nao usamos mais o `browser-image-compression`:
  * decodificar a foto em tamanho original (12MP+) estoura a memoria de celulares
@@ -13,9 +17,9 @@
  * pode ser perdida.
  */
 
-export const FOTO_LADO_MAX = 1280;
-export const FOTO_QUALIDADE = 0.7;
-export const FOTO_BYTES_MAX = 250 * 1024;
+export const FOTO_LADO_MAX = 1920;
+export const FOTO_QUALIDADE = 0.8;
+export const FOTO_BYTES_MAX = 600 * 1024;
 export const MINIATURA_LADO_MAX = 320;
 /** Limite de tempo para a decodificacao — acima disso seguimos com o original. */
 export const COMPRESSAO_TIMEOUT_MS = 25_000;
@@ -121,8 +125,10 @@ async function bitmapParaJpeg(bitmap: ImageBitmap, qualidade: number): Promise<B
 async function jpegNoAlvo(bitmap: ImageBitmap, bytesMax: number): Promise<Blob> {
   let qualidade = FOTO_QUALIDADE;
   let blob = await bitmapParaJpeg(bitmap, qualidade);
-  while (blob.size > bytesMax && qualidade > 0.4) {
-    qualidade = Math.max(0.4, qualidade - 0.12);
+  // Piso de qualidade mais alto: preferimos um arquivo um pouco maior a perder
+  // detalhe da evidencia (a resolucao e o que permite validar no cartorio).
+  while (blob.size > bytesMax && qualidade > 0.5) {
+    qualidade = Math.max(0.5, qualidade - 0.1);
     blob = await bitmapParaJpeg(bitmap, qualidade);
   }
   return blob;

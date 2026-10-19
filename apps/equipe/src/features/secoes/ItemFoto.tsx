@@ -66,7 +66,7 @@ const useClasses = makeStyles({
     display: 'block',
     width: '100%',
     aspectRatio: '4 / 3',
-    objectFit: 'cover',
+    objectFit: 'contain',
     borderRadius: tokens.borderRadiusLarge,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground3,

@@ -125,8 +125,9 @@ export const MANUAL_EQUIPE_CAMPO: Manual = {
         {
           tipo: 'lista',
           itens: [
+            'Fotografe com o aparelho **na horizontal** (deitado) — na vertical a foto perde metade da seção. Se o aparelho estiver em pé, o botão de capturar fica travado até girar.',
             '**Não fotografe pessoas** — enquadre só o ambiente (cartazes, mesa, urna/cabine).',
-            'Foto escura, estourada ou borrada: o app avisa → **Refazer** ou **Salvar assim mesmo**.',
+            'Foto escura, estourada, borrada ou na vertical: o app avisa → **Refazer** ou **Salvar assim mesmo**.',
             'A localização (GPS) é opcional e não bloqueia nada.',
           ],
         },
@@ -159,7 +160,7 @@ export const MANUAL_EQUIPE_CAMPO: Manual = {
               acao: 'Ajustes → **Baixar dados do dia** (com internet).',
             },
             { situacao: 'Ficou sem internet', acao: 'Continue normalmente; o envio acontece depois.' },
-            { situacao: 'Foto escura ou borrada', acao: '**Refazer** a foto.' },
+            { situacao: 'Foto escura, borrada ou na vertical', acao: '**Refazer** a foto, com o aparelho deitado.' },
             {
               situacao: '"Correção solicitada" pelo cartório',
               acao: 'Abra a seção → item com etiqueta **Corrigir** → ajuste e reenvie.',

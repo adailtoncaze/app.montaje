@@ -13,7 +13,7 @@ import { Aviso, Botao } from '@montaje/ui';
  */
 
 /** Limite do maior lado ao capturar; o pipeline de compressao normaliza depois. */
-const LADO_MAX_CAPTURA = 1280;
+const LADO_MAX_CAPTURA = 1920;
 
 const useClasses = makeStyles({
   fundo: {
@@ -99,6 +99,31 @@ const useClasses = makeStyles({
     maxWidth: '48ch',
     opacity: 0.85,
   },
+  avisoGirar: {
+    color: tokens.colorNeutralForegroundStaticInverted,
+    textAlign: 'center',
+    maxWidth: '52ch',
+    fontWeight: tokens.fontWeightSemibold,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: tokens.borderRadiusMedium,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+  },
+  /** Saída de emergência caso algum aparelho não gire o stream da câmera. */
+  forcar: {
+    minHeight: 'auto',
+    paddingLeft: 0,
+    paddingRight: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    color: 'rgba(255, 255, 255, 0.75)',
+    textDecoration: 'underline',
+    textDecorationColor: 'rgba(255, 255, 255, 0.45)',
+    ':hover': {
+      color: tokens.colorNeutralForegroundStaticInverted,
+      backgroundColor: 'transparent',
+      textDecorationColor: tokens.colorNeutralForegroundStaticInverted,
+    },
+  },
   acoes: {
     display: 'flex',
     alignItems: 'center',
@@ -157,16 +182,32 @@ export function CameraApp({
   const [erro, setErro] = useState<string | null>(null);
   const [pronta, setPronta] = useState(false);
   const [capturando, setCapturando] = useState(false);
+  /**
+   * Orientacao da imagem da camera: evidencia de pe perde metade do enquadramento
+   * e atrapalha a leitura no cartorio. O navegador entrega o stream ja girado
+   * conforme a posicao do aparelho, entao `videoWidth < videoHeight` significa que
+   * a foto sairia em pe — o disparo fica bloqueado ate girar.
+   */
+  const [retrato, setRetrato] = useState(false);
+  /** Trava de emergencia: libera o disparo em pe quando o aparelho nao gira. */
+  const [capturaForcada, setCapturaForcada] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
+    let verificando = 0;
     setErro(null);
     setPronta(false);
+    setRetrato(false);
+    setCapturaForcada(false);
 
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' } },
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
         if (cancelado) {
@@ -179,7 +220,21 @@ export function CameraApp({
           video.srcObject = stream;
           await video.play().catch(() => undefined);
         }
-        if (!cancelado) setPronta(true);
+        if (cancelado) return;
+        setPronta(true);
+
+        // A camera pode ser aberta antes do stream estabilizar e o usuario pode
+        // girar o aparelho a qualquer momento: acompanha a orientacao em loop.
+        const checarOrientacao = () => {
+          const v = videoRef.current;
+          if (!v || !v.videoWidth || !v.videoHeight) return;
+          const emPe = v.videoWidth < v.videoHeight;
+          setRetrato(emPe);
+          // De volta na horizontal: a trava volta a valer para a proxima foto.
+          if (!emPe) setCapturaForcada(false);
+        };
+        checarOrientacao();
+        verificando = window.setInterval(checarOrientacao, 400);
       } catch (causa) {
         if (!cancelado) setErro(mensagemDeErro(causa));
       }
@@ -187,6 +242,7 @@ export function CameraApp({
 
     return () => {
       cancelado = true;
+      window.clearInterval(verificando);
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
@@ -195,6 +251,10 @@ export function CameraApp({
   function capturar() {
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) return;
+    if (video.videoWidth < video.videoHeight && !capturaForcada) {
+      setRetrato(true);
+      return;
+    }
 
     setCapturando(true);
     const escala = Math.min(1, LADO_MAX_CAPTURA / Math.max(video.videoWidth, video.videoHeight));
@@ -265,9 +325,29 @@ export function CameraApp({
       )}
 
       <div className={c.rodape}>
-        {!erro && (
+        {!erro && retrato && (
+          <Text className={c.avisoGirar} size={300}>
+            Gire o aparelho para a horizontal: na vertical a foto perde metade da seção. Quando
+            estiver deitado, o botão de capturar volta.
+          </Text>
+        )}
+
+        {!erro && retrato && (
+          <Botao
+            variante="sutil"
+            className={c.forcar}
+            disabled={capturaForcada}
+            onClick={() => setCapturaForcada(true)}
+            title="Continuar com o aparelho na vertical"
+          >
+            {capturaForcada ? 'Foto em pé autorizada' : 'Continuar mesmo assim (foto em pé)'}
+          </Botao>
+        )}
+
+        {!erro && !retrato && (
           <Text className={c.dica} size={200}>
-            Não fotografe pessoas — enquadre apenas o ambiente da seção.
+            Segure o aparelho deitado (horizontal) e não fotografe pessoas — enquadre apenas o
+            ambiente da seção.
           </Text>
         )}
 
@@ -278,9 +358,16 @@ export function CameraApp({
               className={c.disparo}
               icon={<Camera24Regular />}
               carregando={capturando}
-              disabled={!pronta}
+              disabled={!pronta || (retrato && !capturaForcada)}
               onClick={capturar}
-              aria-label="Capturar foto"
+              aria-label={
+                retrato && !capturaForcada ? 'Gire o aparelho para a horizontal' : 'Capturar foto'
+              }
+              title={
+                retrato && !capturaForcada
+                  ? 'Gire o aparelho para a horizontal para capturar.'
+                  : 'Capturar foto'
+              }
             />
           )}
           <Botao

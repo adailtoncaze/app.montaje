@@ -68,22 +68,12 @@ import {
   type ValidacaoComAutor,
 } from '@/lib/dados';
 import { mensagemDeErro, useAvisoErro } from '@/lib/avisos';
+import { VisualizadorFoto, type FotoAberta } from './VisualizadorFoto';
 import { ROTULO_STATUS_ITEM, tomStatusEtapa, tomStatusItem } from '@/lib/status-ui';
 import { useSessao } from '@/features/auth/store';
 import { cn } from '@/lib/utils';
 
 const LIMITE_COMENTARIO = 600;
-
-/** Dados de uma foto preparados para o visualizador em tela cheia. */
-interface FotoAberta {
-  url: string;
-  titulo: string;
-  numero: number | null;
-  capturada: string | null;
-  coords: string | null;
-  observacao: string | null;
-  desvio: Desvio | null;
-}
 
 /** Resposta Sim/Não (ou "não respondido") como selo compacto. */
 function ChipResposta({ resposta }: { resposta: boolean | null }) {
@@ -170,8 +160,12 @@ function ItemRevisao({
   const evidencia = [...evidencias].sort((a, b) =>
     (b.capturada_em ?? b.created_at).localeCompare(a.capturada_em ?? a.created_at),
   )[0];
-  const caminho = evidencia?.caminho_miniatura ?? evidencia?.caminho_foto ?? null;
-  const url = caminho ? urls[caminho] : undefined;
+  // A lista mostra a miniatura (320px, rápida); o visualizador abre a foto
+  // original — validar a evidência sobre a miniatura distorce a resolução real.
+  const caminhoMiniatura = evidencia?.caminho_miniatura ?? evidencia?.caminho_foto ?? null;
+  const urlMiniatura = caminhoMiniatura ? urls[caminhoMiniatura] : undefined;
+  const urlFoto = (evidencia?.caminho_foto ? urls[evidencia.caminho_foto] : undefined) ??
+    urlMiniatura;
   const tom = tomStatusItem(item.status);
 
   const capturada = evidencia?.capturada_em
@@ -186,12 +180,12 @@ function ItemRevisao({
     <li className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-accent/40">
       {item.tipo === 'foto' ? (
         <MiniaturaEvidencia
-          url={url}
+          url={urlMiniatura}
           alt={item.nome}
           onAbrir={() =>
-            url &&
+            urlFoto &&
             onAbrir({
-              url,
+              url: urlFoto,
               titulo: item.nome,
               numero: item.foto_numero,
               capturada,
@@ -234,7 +228,7 @@ function ItemRevisao({
           {coords ? ` · ${coords}` : ''}
         </span>
 
-        {item.tipo === 'foto' && !url && (
+        {item.tipo === 'foto' && !urlMiniatura && (
           <span className="text-xs font-semibold text-warning">Foto não enviada.</span>
         )}
 
@@ -983,49 +977,7 @@ export function SecaoDetalhe() {
         </div>
       </div>
 
-      <Dialog open={foto !== null} onOpenChange={(aberto) => !aberto && setFoto(null)}>
-        <DialogContent className="max-w-5xl p-0">
-          {foto && (
-            <>
-              <div className="border-b border-border p-5 pr-14">
-                <DialogTitle>{foto.titulo}</DialogTitle>
-                <DialogDescription>
-                  {foto.numero != null ? `Foto #${foto.numero} · ` : ''}
-                  {foto.capturada ?? 'Data não informada'}
-                  {foto.coords ? ` · ${foto.coords}` : ''}
-                </DialogDescription>
-              </div>
-              <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-muted p-3">
-                <img
-                  src={foto.url}
-                  alt={foto.titulo}
-                  className="max-h-[72vh] w-auto rounded-md object-contain"
-                />
-              </div>
-              {(foto.observacao || foto.desvio) && (
-                <div className="flex flex-col gap-2 border-t border-border p-5">
-                  {foto.observacao && (
-                    <p className="text-sm text-foreground">Obs.: {foto.observacao}</p>
-                  )}
-                  {foto.desvio && (
-                    <Alert variant="warning">
-                      <AlertIcon>
-                        <TriangleAlert />
-                      </AlertIcon>
-                      <AlertDescription>
-                        <strong className="block">
-                          Desvio: {ROTULO_MOTIVO[foto.desvio.motivo]}
-                        </strong>
-                        {foto.desvio.observacao?.trim() || 'Sem observação.'}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <VisualizadorFoto foto={foto} onFechar={() => setFoto(null)} />
     </div>
   );
 }
