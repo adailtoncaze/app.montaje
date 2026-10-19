@@ -6,10 +6,15 @@ import { BrowserRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { ProvedorMontaje } from '@montaje/ui';
 import { App } from './App';
+import { solicitarArmazenamentoPersistente } from './db/armazenamento';
 import './styles/index.css';
 
 // Atualizacao automatica do service worker (PWA)
 registerSW({ immediate: true });
+
+// APP-27: pede armazenamento persistente para reduzir o risco de o navegador
+// descartar o checklist e as fotos que ainda nao subiram para o servidor.
+void solicitarArmazenamentoPersistente();
 
 const queryClient = new QueryClient({
   defaultOptions: {

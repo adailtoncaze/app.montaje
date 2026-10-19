@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
   Radio,
   RadioGroup,
@@ -6,12 +6,16 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   ArrowDownload24Regular,
+  ArrowUpload24Regular,
   Delete24Regular,
   Desktop24Regular,
+  HardDrive24Regular,
   Info24Regular,
   Person24Regular,
+  Save24Regular,
   SignOut24Regular,
   WeatherMoon24Regular,
   WeatherSunny24Regular,
@@ -31,6 +35,18 @@ import {
 import { useSessao } from '@/features/auth/store';
 import { ROTULO_PAPEL } from '@montaje/core';
 import { limparTudo } from '@/db/repo';
+import {
+  estadoDoArmazenamento,
+  formatarBytes,
+  solicitarArmazenamentoPersistente,
+  type EstadoArmazenamento,
+} from '@/db/armazenamento';
+import {
+  exportarBackup,
+  resumoDoAparelho,
+  restaurarBackup,
+  ultimoBackup,
+} from '@/db/backup';
 import { supabase, supabaseConfigurado } from '@/lib/supabase';
 import { CartaoInstalar } from '@/features/pwa/CartaoInstalar';
 import { useInstalarPWA } from '@/features/pwa/useInstalarPWA';
@@ -93,18 +109,40 @@ export function Configuracoes() {
   const [limpando, setLimpando] = useState(false);
   const [confirmarSair, setConfirmarSair] = useState(false);
 
+  // APP-27 — persistência e backup local.
+  const [armazenamento, setArmazenamento] = useState<EstadoArmazenamento | null>(null);
+  const [ultimoBackupEm, setUltimoBackupEm] = useState<string | null>(null);
+  const [exportando, setExportando] = useState(false);
+  const [restaurando, setRestaurando] = useState(false);
+  const [arquivoRestaurar, setArquivoRestaurar] = useState<File | null>(null);
+  const [erroBackup, setErroBackup] = useState<string | null>(null);
+  const inputArquivo = useRef<HTMLInputElement>(null);
+  const resumo = useLiveQuery(() => resumoDoAparelho(), [], undefined);
+
   useEffect(() => {
     void ultimaSincronizacao().then(setUltima);
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      // Pede armazenamento persistente e lê o estado para exibir em Ajustes.
+      await solicitarArmazenamentoPersistente();
+      setArmazenamento(await estadoDoArmazenamento());
+      setUltimoBackupEm(await ultimoBackup());
+    })();
   }, []);
 
   async function baixar() {
     setErro(null);
     setResultado(null);
     setBaixando(true);
+    // Gesto do usuário: boa hora para pedir armazenamento persistente.
+    void solicitarArmazenamentoPersistente();
     try {
       const r = await baixarDadosDoDia();
       setResultado(r);
       setUltima(await ultimaSincronizacao());
+      setArmazenamento(await estadoDoArmazenamento());
       if (r.incompleto) {
         avisos.alerta(
           'Download incompleto',
@@ -146,6 +184,55 @@ export function Configuracoes() {
     } finally {
       setLimpando(false);
       setConfirmarLimpar(false);
+    }
+  }
+
+  async function salvarBackup() {
+    setErroBackup(null);
+    setExportando(true);
+    try {
+      const r = await exportarBackup();
+      setUltimoBackupEm(await ultimoBackup());
+      avisos.sucesso(
+        'Backup salvo',
+        `${r.fotos} foto(s) · ${formatarBytes(r.bytes)}. Guarde o arquivo em local seguro.`,
+      );
+    } catch (e) {
+      const mensagem = e instanceof Error ? e.message : 'Não foi possível gerar o backup.';
+      setErroBackup(mensagem);
+      avisos.erro('Falha no backup', mensagem);
+    } finally {
+      setExportando(false);
+    }
+  }
+
+  function escolherArquivo() {
+    setErroBackup(null);
+    inputArquivo.current?.click();
+  }
+
+  function aoEscolherArquivo(evento: ChangeEvent<HTMLInputElement>) {
+    const arquivo = evento.target.files?.[0];
+    evento.target.value = ''; // permite escolher o mesmo arquivo novamente
+    if (arquivo) setArquivoRestaurar(arquivo);
+  }
+
+  async function restaurar() {
+    if (!arquivoRestaurar) return;
+    setErroBackup(null);
+    setRestaurando(true);
+    try {
+      const r = await restaurarBackup(arquivoRestaurar);
+      setUltimoBackupEm(await ultimoBackup());
+      setUltima(await ultimaSincronizacao());
+      avisos.sucesso('Backup restaurado', `${r.secoes} seção(ões) · ${r.fotos} foto(s).`);
+    } catch (e) {
+      const mensagem = e instanceof Error ? e.message : 'Não foi possível restaurar o backup.';
+      setErroBackup(mensagem);
+      avisos.erro('Falha ao restaurar', mensagem);
+    } finally {
+      setRestaurando(false);
+      setArquivoRestaurar(null);
     }
   }
 
@@ -247,6 +334,69 @@ export function Configuracoes() {
           </div>
         </Cartao>
 
+        <Cartao
+          inicio={
+            <Medalhao tom={armazenamento?.persistido ? 'ok' : 'neutro'}>
+              <HardDrive24Regular />
+            </Medalhao>
+          }
+          titulo="Backup e armazenamento"
+          descricao="Protege o checklist e as fotos que ainda não subiram."
+        >
+          <div className={c.dados}>
+            <Text size={200} className={c.rotulo}>
+              {armazenamento?.persistido
+                ? 'Armazenamento protegido: o navegador não descarta estes dados automaticamente.'
+                : 'Armazenamento comum: sob falta de espaço o navegador pode apagar dados não enviados.'}
+            </Text>
+            <Text size={200} className={c.rotulo}>
+              No aparelho: {resumo?.secoes ?? 0} seção(ões) · {resumo?.itens ?? 0} item(ns) ·{' '}
+              {resumo?.fotos ?? 0} foto(s)
+              {armazenamento?.usoBytes != null
+                ? ` · ${formatarBytes(armazenamento.usoBytes)} em uso`
+                : ''}
+              {resumo && resumo.pendentes > 0 ? ` · ${resumo.pendentes} pendente(s)` : ''}
+            </Text>
+            <Text size={200} className={c.rotulo}>
+              Último backup: {formatarDataHora(ultimoBackupEm)}
+            </Text>
+
+            {erroBackup && (
+              <Aviso tom="erro" titulo="Falha no backup">
+                {erroBackup}
+              </Aviso>
+            )}
+
+            <Botao
+              onClick={salvarBackup}
+              carregando={exportando}
+              icon={<Save24Regular />}
+              larguraTotal
+            >
+              Salvar backup no aparelho
+            </Botao>
+            <Botao
+              variante="secundario"
+              onClick={escolherArquivo}
+              icon={<ArrowUpload24Regular />}
+              larguraTotal
+            >
+              Restaurar backup
+            </Botao>
+            <Text size={200} className={c.rotulo}>
+              O backup é um arquivo .json com tudo o que está no aparelho, incluindo as fotos.
+              Guarde-o em local seguro (nuvem ou e-mail) antes de sair para o campo.
+            </Text>
+            <input
+              ref={inputArquivo}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={aoEscolherArquivo}
+            />
+          </div>
+        </Cartao>
+
         <CartaoInstalar />
 
         <Cartao
@@ -304,6 +454,17 @@ export function Configuracoes() {
         tom="perigo"
         carregando={limpando}
         aoConfirmar={limpar}
+      />
+
+      <DialogoConfirmacao
+        aberto={arquivoRestaurar !== null}
+        aoFechar={() => setArquivoRestaurar(null)}
+        titulo="Restaurar este backup?"
+        descricao="Os dados atuais do aparelho serão substituídos pelo conteúdo do arquivo. Envios ainda pendentes no arquivo voltam para a fila."
+        rotuloConfirmar="Restaurar"
+        tom="perigo"
+        carregando={restaurando}
+        aoConfirmar={restaurar}
       />
     </>
   );

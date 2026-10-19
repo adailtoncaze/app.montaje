@@ -326,11 +326,14 @@ export async function limparTudo(): Promise<void> {
     db.locais.clear(),
     db.secoes.clear(),
     db.cronograma.clear(),
+    db.modeloChecklist.clear(),
     db.itens.clear(),
     db.evidencias.clear(),
     db.sigilo.clear(),
     db.desvios.clear(),
     db.validacoes.clear(),
+    db.layout.clear(),
     db.outbox.clear(),
+    db.meta.clear(),
   ]);
 }
