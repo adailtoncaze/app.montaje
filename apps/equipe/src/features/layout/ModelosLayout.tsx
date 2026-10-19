@@ -144,6 +144,24 @@ const useClasses = makeStyles({
     objectFit: 'contain',
     borderRadius: tokens.borderRadiusLarge,
   },
+  pilha: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalL,
+    width: '100%',
+  },
+  bloco: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
+  imagemGrande: {
+    display: 'block',
+    width: '100%',
+    borderRadius: tokens.borderRadiusLarge,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground3,
+  },
 });
 
 /** Um modelo consultável: miniatura + ampliação em tela cheia. */
@@ -225,5 +243,82 @@ export function ModelosLayout() {
         Imagens de referência guardadas no aparelho — funcionam sem internet.
       </Text>
     </Cartao>
+  );
+}
+
+/** Diálogo somente-leitura com todos os modelos, um abaixo do outro. */
+export function DialogoModelos({
+  aberto,
+  aoFechar,
+}: {
+  aberto: boolean;
+  aoFechar: () => void;
+}) {
+  const c = useClasses();
+
+  return (
+    <Dialog
+      open={aberto}
+      onOpenChange={(_evento, dados) => {
+        if (!dados.open) aoFechar();
+      }}
+    >
+      <DialogSurface className={c.dialogo}>
+        <DialogBody>
+          <DialogTitle>Modelos de montagem</DialogTitle>
+          <DialogContent className={c.dialogoConteudo}>
+            <div className={c.pilha}>
+              {MODELOS_LAYOUT.map((modelo) => (
+                <div key={modelo.arquivo} className={c.bloco}>
+                  <Text weight="semibold">{modelo.titulo}</Text>
+                  <Text size={200} className={c.descricao}>
+                    {modelo.descricao}
+                  </Text>
+                  <img
+                    className={c.imagemGrande}
+                    src={urlDoModelo(modelo.arquivo)}
+                    alt={`Modelo: ${modelo.titulo}`}
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+          <DialogActions>
+            <Botao variante="secundario" onClick={aoFechar}>
+              Fechar
+            </Botao>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
+  );
+}
+
+/**
+ * Botão de consulta dos modelos, para usar dentro da seção (ex.: Etapa 1 —
+ * layout). Abre os modelos em um diálogo, sem sair da tela de trabalho.
+ */
+export function BotaoVerModelos({
+  larguraTotal = false,
+  rotulo = 'Ver modelos de montagem',
+}: {
+  larguraTotal?: boolean;
+  rotulo?: string;
+}) {
+  const [aberto, setAberto] = useState(false);
+
+  return (
+    <>
+      <Botao
+        variante="secundario"
+        larguraTotal={larguraTotal}
+        icon={<Image24Regular />}
+        onClick={() => setAberto(true)}
+      >
+        {rotulo}
+      </Botao>
+      <DialogoModelos aberto={aberto} aoFechar={() => setAberto(false)} />
+    </>
   );
 }

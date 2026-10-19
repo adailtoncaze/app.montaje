@@ -25,6 +25,7 @@ import {
 import { db } from '@/db/schema';
 import { tomStatusEtapa } from '@/lib/status-ui';
 import { baixarAlteracoes } from '@/features/sync/download';
+import { BotaoVerModelos } from '@/features/layout/ModelosLayout';
 import { useAvisos } from '@/lib/avisos';
 
 const useClasses = makeStyles({
@@ -50,7 +51,9 @@ const useClasses = makeStyles({
   },
   acao: {
     display: 'flex',
+    flexWrap: 'wrap',
     justifyContent: 'flex-start',
+    gap: tokens.spacingHorizontalS,
   },
 });
 
@@ -260,6 +263,7 @@ export function SecaoDetalhe() {
         )}
 
         <div className={c.acao}>
+          <BotaoVerModelos />
           <Botao
             variante="secundario"
             icon={<ArrowSync24Regular />}

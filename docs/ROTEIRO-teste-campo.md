@@ -121,6 +121,8 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
   - ✅ Fundo branco, textos e contornos bem mais escuros; a preferência fica salva.
 - [ ] **A**: Ajustes → **Modelos de montagem** → ampliar cada um dos 3 modelos.
   - ✅ As imagens abrem e ampliam, e continuam acessíveis **sem internet**.
+- [ ] **A**: entrar em uma seção → **Ver modelos de montagem** (também na **Etapa 1**).
+  - ✅ Os modelos abrem em diálogo, sem sair da tela de trabalho.
 
 ### Fase 10 — Resiliência (o que mais importa em campo)
 - [ ] **A**: durante o preenchimento, **fechar o app** (ou "matar" pelo gerenciador) e reabrir.
