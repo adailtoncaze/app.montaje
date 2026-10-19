@@ -16,6 +16,9 @@ exceção (correção, reabertura, sigilo não conforme, falha de envio).
 
 ## 1. Preparação (fazer em casa, com internet)
 
+> Passo a passo detalhado do cadastro (local, equipe, contas e cronograma) em
+> **[PREPARO-dados-teste.md](PREPARO-dados-teste.md)**.
+
 ### 1.1 No banco / painel do cartório
 - [ ] Local de teste cadastrado com **2 a 3 seções** (painel → *Locais de votação*).
 - [ ] Equipe de teste criada com **2 membros** (2 matrículas) — painel → *Equipes*.
