@@ -946,21 +946,24 @@ export function SecaoDetalhe() {
           )}
         </div>
 
-        {/* Coluna lateral: validação (fixa ao rolar), resumo e histórico. */}
+        {/* Coluna lateral: validação, resumo e histórico. */}
+        {/*
+          O painel de validação NÃO pode ser `sticky` aqui: sendo irmão dos cards
+          de Resumo/Histórico dentro da mesma coluna, ele "colava" no topo da
+          janela ao rolar e passava a cobrir esses cards. Tudo rola junto.
+        */}
         <div className="flex flex-col gap-6">
-          <div className="xl:sticky xl:top-24">
-            {perfil && (
-              <PainelValidacao
-                detalhe={data}
-                etapa={etapa}
-                status={statusEtapa}
-                conforme={secao.conforme}
-                validadorId={perfil.id}
-                ultima={ultimaDaEtapa}
-                onValidado={recarregar}
-              />
-            )}
-          </div>
+          {perfil && (
+            <PainelValidacao
+              detalhe={data}
+              etapa={etapa}
+              status={statusEtapa}
+              conforme={secao.conforme}
+              validadorId={perfil.id}
+              ultima={ultimaDaEtapa}
+              onValidado={recarregar}
+            />
+          )}
 
           <ResumoEtapa
             etapa={etapa}
