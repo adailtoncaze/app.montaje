@@ -12,6 +12,8 @@ exceção (correção, reabertura, sigilo não conforme, falha de envio).
 > Regra de corte (se o app não estiver íntegro): usar o **checklist de papel na Etapa 1** e priorizar
 > o app na **Etapa 2 (sigilo do voto)**.
 
+> Material de apoio da equipe (resumo de 1 página, para imprimir): **[MANUAL-equipe-campo.md](MANUAL-equipe-campo.md)**.
+
 ---
 
 ## 1. Preparação (fazer em casa, com internet)
@@ -41,6 +43,7 @@ exceção (correção, reabertura, sigilo não conforme, falha de envio).
 - [ ] 2 celulares com bateria cheia + powerbank.
 - [ ] Cartão de memória / espaço livre para as fotos.
 - [ ] Este roteiro impresso + a folha de registro (seção 6).
+- [ ] **Manual da equipe de campo** impresso, um por celular ([MANUAL-equipe-campo.md](MANUAL-equipe-campo.md)).
 - [ ] Checklist de papel (plano B).
 
 ---
