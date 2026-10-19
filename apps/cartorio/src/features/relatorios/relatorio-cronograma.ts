@@ -1,18 +1,16 @@
-import type { Etapa, Secao, StatusEtapa, Vinculo } from '@montaje/core';
-import type { EquipeDetalhe, EscalaDetalhe, LocalCadastro, MembroDetalhe } from '@/lib/cadastros';
-import { dataLocal } from '@/lib/datas';
-import { situacaoSecao, type SituacaoSecao } from '@/lib/status-ui';
+import type { Etapa } from '@montaje/core';
+import type { EquipeDetalhe, EscalaDetalhe, LocalCadastro } from '@/lib/cadastros';
+import { dataLocal, formatarDataCurta } from '@/lib/datas';
 
 /**
- * Modelo do relatório de cronograma de montagem.
- *
- * Consolida as três fontes do painel — cronograma (escalas), equipes (com
- * membros) e locais (com seções) — em um documento único, agrupado por dia e
- * por etapa, com as escalas ordenadas pelo campo `ordem` de visita (sem ordem
- * vão para o fim, desempatando por zona e nome do local).
+ * Modelo puro do documento "Cronograma de Montagem de Seção" (Gestão →
+ * Relatórios), na mesma estrutura em que o PDF é impresso: equipe → etapa →
+ * dia, com as escalas de cada dia ordenadas pelo campo `ordem` de visita
+ * (sem ordem no fim, desempatando por zona e nome do local).
  *
  * A montagem é pura (sem rede): os dados chegam pelos hooks de
- * `lib/cadastros`, o que mantém o relatório testável e reutilizável.
+ * `lib/cadastros`, o que mantém o modelo testável e o gerador de PDF
+ * (`gerar-pdf-cronograma.ts`) apenas de apresentação.
  */
 
 /** Rótulos das etapas, mesmos nomes das abas do detalhe da seção. */
@@ -21,16 +19,6 @@ export const ROTULO_ETAPA: Record<Etapa, string> = {
   2: 'Etapa 2 — Sigilo do voto',
 };
 
-const ROTULO_VINCULO: Record<Vinculo, string> = {
-  servidor: 'Servidor',
-  alvt: 'ALVT',
-};
-
-/** "Servidor" / "ALVT". */
-export function rotuloVinculo(vinculo: Vinculo): string {
-  return ROTULO_VINCULO[vinculo];
-}
-
 const FORMATO_DIA = new Intl.DateTimeFormat('pt-BR', {
   weekday: 'long',
   day: '2-digit',
@@ -38,97 +26,77 @@ const FORMATO_DIA = new Intl.DateTimeFormat('pt-BR', {
   year: 'numeric',
 });
 
-/** "Quinta-feira, 23 de outubro de 2026" (com ano, para o documento impresso). */
+/** "Sexta-feira, 02 de outubro de 2026" (cabeçalho de dia no documento). */
 export function rotuloDia(iso: string): string {
   const texto = FORMATO_DIA.format(dataLocal(iso));
   return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/** "17/10/2026 a 24/10/2026" (ou apenas o limite que existir). */
+export function rotuloPeriodo(periodo: { de: string | null; ate: string | null }): string {
+  const { de, ate } = periodo;
+  if (de && ate) {
+    return de === ate
+      ? formatarDataCurta(de)
+      : `${formatarDataCurta(de)} a ${formatarDataCurta(ate)}`;
+  }
+  if (de) return `a partir de ${formatarDataCurta(de)}`;
+  if (ate) return `até ${formatarDataCurta(ate)}`;
+  return 'Sem período';
 }
 
 // ------------------------------------------------------------------ tipos
 
 export interface MembroRelatorio {
   nome: string;
-  matricula: string;
-  vinculo: Vinculo;
   lider: boolean;
 }
 
-export interface SecaoRelatorio {
-  numero: number;
-  etapa1: StatusEtapa;
-  etapa2: StatusEtapa;
-  situacao: SituacaoSecao;
-  /** Sigilo do voto conferido na montagem (`secoes.conforme`). */
-  conforme: boolean;
-}
-
-export interface EquipeRelatorio {
-  id: string;
-  nome: string;
-  lider: string | null;
-  membros: MembroRelatorio[];
-  totalEscalas: number;
-  /** Datas únicas atendidas, em ordem. */
-  datas: string[];
-  /** Locais atendidos, em ordem de zona. */
-  locais: string[];
-  etapas: Etapa[];
-}
-
-export interface EscalaRelatorio {
+export interface EscalaDocumento {
   /** Id da linha em `cronograma` (chave estável do React). */
   id: string;
   ordem: number | null;
   local: { nome: string; zona: number; endereco: string | null };
-  equipe: { nome: string; lider: string | null; membros: MembroRelatorio[] };
-  secoes: SecaoRelatorio[];
+  /** Quantidade de seções cadastradas no local. */
+  qtdSecoes: number;
 }
 
-export interface BlocoEtapaRelatorio {
-  etapa: Etapa;
-  escalas: EscalaRelatorio[];
-}
-
-export interface DiaRelatorio {
+export interface DiaDocumento {
   data: string;
   rotulo: string;
-  etapas: BlocoEtapaRelatorio[];
+  escalas: EscalaDocumento[];
+}
+
+export interface EtapaDocumento {
+  etapa: Etapa;
+  dias: DiaDocumento[];
+}
+
+export interface EquipeDocumento {
+  id: string;
+  nome: string;
+  membros: MembroRelatorio[];
+  etapas: EtapaDocumento[];
   totalEscalas: number;
 }
 
-export interface VisitaLocal {
-  data: string;
-  etapa: Etapa;
-  equipe: string;
-  ordem: number | null;
-}
-
-export interface LocalRelatorio {
-  id: string;
-  zona: number;
-  nome: string;
-  endereco: string | null;
-  secoes: SecaoRelatorio[];
-  visitas: VisitaLocal[];
-}
-
 export interface TotaisRelatorio {
-  dias: number;
   escalas: number;
-  etapa1: number;
-  etapa2: number;
   equipes: number;
   locais: number;
   secoes: number;
+  etapa1: number;
+  etapa2: number;
 }
 
 export interface RelatorioCronograma {
   /** Intervalo real coberto pelas escalas do filtro (ou o filtro, se vazio). */
   periodo: { de: string | null; ate: string | null };
+  /** Zonas eleitorais presentes no recorte, em ordem crescente. */
+  zonas: number[];
   totais: TotaisRelatorio;
-  dias: DiaRelatorio[];
-  equipes: EquipeRelatorio[];
-  locais: LocalRelatorio[];
+  /** Equipes em ordem alfabética, cada uma com etapas e dias. */
+  equipes: EquipeDocumento[];
 }
 
 export interface FiltroRelatorio {
@@ -148,7 +116,7 @@ export const FILTRO_PADRAO: FiltroRelatorio = {
   etapa: 'todas',
 };
 
-/** Diz se há algum filtro de período/equipe/etapa aplicado ao relatório. */
+/** Diz se há algum filtro de período/equipe/etapa aplicado ao documento. */
 export function filtroAtivo(filtro: FiltroRelatorio): boolean {
   return (
     filtro.de !== '' ||
@@ -158,35 +126,10 @@ export function filtroAtivo(filtro: FiltroRelatorio): boolean {
   );
 }
 
-// ------------------------------------------------------------------ conversão
-
-function paraMembro(membro: MembroDetalhe): MembroRelatorio {
-  return {
-    nome: membro.perfil.nome,
-    matricula: membro.perfil.matricula,
-    vinculo: membro.perfil.vinculo,
-    lider: membro.lider,
-  };
-}
-
-function paraSecao(secao: Secao): SecaoRelatorio {
-  return {
-    numero: secao.numero,
-    etapa1: secao.status_etapa1,
-    etapa2: secao.status_etapa2,
-    situacao: situacaoSecao(secao),
-    conforme: secao.conforme,
-  };
-}
-
-/** Descrição de um membro para as linhas compactas do relatório. */
-export function descreverMembro(membro: MembroRelatorio): string {
-  const papel = membro.lider ? ' · líder' : '';
-  return `${membro.nome} (${membro.matricula} · ${rotuloVinculo(membro.vinculo)}${papel})`;
-}
+// ------------------------------------------------------------------ montagem
 
 /** Ordena escalas por `ordem` (sem ordem no fim), depois zona e nome do local. */
-function compararEscala(a: EscalaRelatorio, b: EscalaRelatorio): number {
+function compararEscala(a: EscalaDocumento, b: EscalaDocumento): number {
   const ordemA = a.ordem ?? Number.MAX_SAFE_INTEGER;
   const ordemB = b.ordem ?? Number.MAX_SAFE_INTEGER;
   if (ordemA !== ordemB) return ordemA - ordemB;
@@ -194,12 +137,10 @@ function compararEscala(a: EscalaRelatorio, b: EscalaRelatorio): number {
   return a.local.nome.localeCompare(b.local.nome, 'pt-BR');
 }
 
-// ------------------------------------------------------------------ montagem
-
 /**
- * Monta o relatório a partir do filtro e das três listas do painel.
- * Entradas que não existem mais (equipe/local removidos) aparecem com rótulo
- * de "não cadastrado" em vez de sumir do documento.
+ * Monta o documento a partir do filtro e das três listas do painel.
+ * Escalas de equipes ou locais removidos aparecem com rótulo de "não
+ * cadastrado" em vez de sumir do cronograma.
  */
 export function montarRelatorio(
   filtro: FiltroRelatorio,
@@ -218,8 +159,7 @@ export function montarRelatorio(
     return true;
   });
 
-  const paraEscala = (escala: EscalaDetalhe): EscalaRelatorio => {
-    const equipe = equipesPorId.get(escala.equipe_id);
+  const paraEscala = (escala: EscalaDetalhe): EscalaDocumento => {
     const local = locaisPorId.get(escala.local_id);
     return {
       id: escala.id,
@@ -229,138 +169,74 @@ export function montarRelatorio(
         zona: local?.zona ?? escala.localZona ?? 0,
         endereco: local?.endereco ?? null,
       },
-      equipe: {
-        nome: equipe?.nome ?? escala.equipeNome ?? 'Equipe não cadastrada',
-        lider: equipe?.liderNome ?? null,
-        membros: equipe ? equipe.membros.map(paraMembro) : [],
-      },
-      secoes: local ? local.secoes.map(paraSecao) : [],
+      qtdSecoes: local?.secoes.length ?? 0,
     };
   };
 
-  // Dia -> etapa -> escalas ordenadas pela ordem de visita.
-  const porDia = new Map<string, Map<Etapa, EscalaRelatorio[]>>();
+  // Equipe -> etapa -> dia -> escalas ordenadas pela ordem de visita.
+  const porEquipe = new Map<string, EscalaDetalhe[]>();
   for (const escala of selecionadas) {
-    const etapasDoDia = porDia.get(escala.data);
-    if (etapasDoDia) {
-      const lista = etapasDoDia.get(escala.etapa);
-      if (lista) lista.push(paraEscala(escala));
-      else etapasDoDia.set(escala.etapa, [paraEscala(escala)]);
-    } else {
-      porDia.set(escala.data, new Map([[escala.etapa, [paraEscala(escala)]]]));
-    }
+    const lista = porEquipe.get(escala.equipe_id);
+    if (lista) lista.push(escala);
+    else porEquipe.set(escala.equipe_id, [escala]);
   }
 
-  const dias: DiaRelatorio[] = [...porDia.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([data, etapasDoDia]) => {
-      const blocos: BlocoEtapaRelatorio[] = [];
-      let totalEscalas = 0;
+  const equipesDocumento: EquipeDocumento[] = [...porEquipe.entries()]
+    .map(([equipeId, lista]) => {
+      const equipe = equipesPorId.get(equipeId);
+
+      const etapas: EtapaDocumento[] = [];
       for (const etapa of [1, 2] as const) {
-        const lista = etapasDoDia.get(etapa);
-        if (!lista) continue;
-        const ordenadas = [...lista].sort(compararEscala);
-        blocos.push({ etapa, escalas: ordenadas });
-        totalEscalas += ordenadas.length;
+        const daEtapa = lista.filter((escala) => escala.etapa === etapa);
+        if (daEtapa.length === 0) continue;
+
+        const porData = new Map<string, EscalaDetalhe[]>();
+        for (const escala of daEtapa) {
+          const doDia = porData.get(escala.data);
+          if (doDia) doDia.push(escala);
+          else porData.set(escala.data, [escala]);
+        }
+
+        const dias: DiaDocumento[] = [...porData.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([data, escalasDoDia]) => ({
+            data,
+            rotulo: rotuloDia(data),
+            escalas: escalasDoDia.map(paraEscala).sort(compararEscala),
+          }));
+        etapas.push({ etapa, dias });
       }
-      return { data, rotulo: rotuloDia(data), etapas: blocos, totalEscalas };
-    });
 
-  // Equipes consolidadas: escalam, membros e locais que atendem no período.
-  const equipesRelatorio = new Map<string, EquipeRelatorio>();
-  const locaisRelatorio = new Map<string, LocalRelatorio>();
+      return {
+        id: equipeId,
+        nome: equipe?.nome ?? lista[0].equipeNome ?? 'Equipe não cadastrada',
+        membros: equipe?.membros.map((membro) => ({
+          nome: membro.perfil.nome,
+          lider: membro.lider,
+        })) ?? [],
+        etapas,
+        totalEscalas: lista.length,
+      };
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  const locaisIds = new Set(selecionadas.map((escala) => escala.local_id));
   let etapa1 = 0;
-
+  let secoes = 0;
+  const zonas = new Set<number>();
   for (const escala of selecionadas) {
     if (escala.etapa === 1) etapa1 += 1;
-
-    const equipe = equipesPorId.get(escala.equipe_id);
-    const local = locaisPorId.get(escala.local_id);
-    const nomeEquipe = equipe?.nome ?? escala.equipeNome ?? 'Equipe não cadastrada';
-    const nomeLocal = local
-      ? `Zona ${local.zona} · ${local.nome}`
-      : escala.localNome
-        ? `Local não cadastrado · ${escala.localNome}`
-        : 'Local não cadastrado';
-
-    let equipeRelatorio = equipesRelatorio.get(escala.equipe_id);
-    if (!equipeRelatorio) {
-      equipeRelatorio = {
-        id: escala.equipe_id,
-        nome: nomeEquipe,
-        lider: equipe?.liderNome ?? null,
-        membros: equipe ? equipe.membros.map(paraMembro) : [],
-        totalEscalas: 0,
-        datas: [],
-        locais: [],
-        etapas: [],
-      };
-      equipesRelatorio.set(escala.equipe_id, equipeRelatorio);
-    }
-    equipeRelatorio.totalEscalas += 1;
-    if (!equipeRelatorio.datas.includes(escala.data)) equipeRelatorio.datas.push(escala.data);
-    if (!equipeRelatorio.locais.includes(nomeLocal)) equipeRelatorio.locais.push(nomeLocal);
-    if (!equipeRelatorio.etapas.includes(escala.etapa)) equipeRelatorio.etapas.push(escala.etapa);
-
-    let localRelatorio = locaisRelatorio.get(escala.local_id);
-    if (!localRelatorio) {
-      localRelatorio = {
-        id: escala.local_id,
-        zona: local?.zona ?? escala.localZona ?? 0,
-        nome: local?.nome ?? escala.localNome ?? 'Local não cadastrado',
-        endereco: local?.endereco ?? null,
-        secoes: local ? local.secoes.map(paraSecao) : [],
-        visitas: [],
-      };
-      locaisRelatorio.set(escala.local_id, localRelatorio);
-    }
-    localRelatorio.visitas.push({
-      data: escala.data,
-      etapa: escala.etapa,
-      equipe: nomeEquipe,
-      ordem: escala.ordem,
-    });
   }
-
-  /**
-   * Locais vêm na ordem da primeira visita (data, etapa e campo `ordem`), que
-   * é a sequência real de atendimento; zona e nome desempatam.
-   */
-  const compararLocais = (a: LocalRelatorio, b: LocalRelatorio): number => {
-    const primeiraA = a.visitas[0];
-    const primeiraB = b.visitas[0];
-    if (primeiraA && primeiraB) {
-      const ordemA = primeiraA.ordem ?? Number.MAX_SAFE_INTEGER;
-      const ordemB = primeiraB.ordem ?? Number.MAX_SAFE_INTEGER;
-      return (
-        primeiraA.data.localeCompare(primeiraB.data) ||
-        primeiraA.etapa - primeiraB.etapa ||
-        ordemA - ordemB
-      );
+  for (const localId of locaisIds) {
+    const local = locaisPorId.get(localId);
+    if (local) {
+      secoes += local.secoes.length;
+      if (local.zona > 0) zonas.add(local.zona);
+    } else {
+      const escala = selecionadas.find((item) => item.local_id === localId);
+      if (escala?.localZona) zonas.add(escala.localZona);
     }
-    return a.zona - b.zona || a.nome.localeCompare(b.nome, 'pt-BR');
-  };
-
-  const equipesOrdenadas = [...equipesRelatorio.values()].sort((a, b) =>
-    a.nome.localeCompare(b.nome, 'pt-BR'),
-  );
-
-  for (const equipe of equipesOrdenadas) {
-    equipe.datas.sort();
-    equipe.locais.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    equipe.etapas.sort();
   }
-
-  const locaisOrdenados = [...locaisRelatorio.values()];
-  for (const local of locaisOrdenados) {
-    local.visitas.sort(
-      (a, b) =>
-        a.data.localeCompare(b.data) ||
-        a.etapa - b.etapa ||
-        (a.ordem ?? Number.MAX_SAFE_INTEGER) - (b.ordem ?? Number.MAX_SAFE_INTEGER),
-    );
-  }
-  locaisOrdenados.sort(compararLocais);
 
   const datas = selecionadas.map((escala) => escala.data).sort();
   const periodo = {
@@ -370,17 +246,15 @@ export function montarRelatorio(
 
   return {
     periodo,
+    zonas: [...zonas].sort((a, b) => a - b),
     totais: {
-      dias: dias.length,
       escalas: selecionadas.length,
+      equipes: equipesDocumento.length,
+      locais: locaisIds.size,
+      secoes,
       etapa1,
       etapa2: selecionadas.length - etapa1,
-      equipes: equipesOrdenadas.length,
-      locais: locaisOrdenados.length,
-      secoes: locaisOrdenados.reduce((soma, local) => soma + local.secoes.length, 0),
     },
-    dias,
-    equipes: equipesOrdenadas,
-    locais: locaisOrdenados,
+    equipes: equipesDocumento,
   };
 }

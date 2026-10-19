@@ -281,9 +281,10 @@
 }
 
 /*
- * Impressão em PDF (apps/cartorio): manual da equipe (Ajuda → Manual) e
- * relatório de cronograma (Gestão → Relatórios). Margens da folha menores que
- * o padrão do navegador para caber mais conteúdo por página.
+ * Impressão em PDF (apps/cartorio): manual da equipe (Ajuda → Manual).
+ * Margens da folha menores que o padrão do navegador para caber mais conteúdo
+ * por página. O relatório de cronograma (Gestão → Relatórios) não usa a janela
+ * de impressão: o PDF é gerado pelo próprio app (gerar-pdf-cronograma.ts).
  */
 @page {
   margin: 12mm;
@@ -292,7 +293,7 @@
 /*
  * Força "papel branco" mesmo com o tema escuro ativo: os utilitários do
  * Tailwind usam os tokens `--*` de forma inline, então redefini-los aqui no
- * wrapper já recolore cartões, avisos, tabelas e listas dos dois documentos.
+ * wrapper já recolore cartões, avisos, tabelas e listas do manual impresso.
  */
 @media print {
   /* Impressão multi-página: `height: 100%` no body/#root pode cortar o conteúdo. */
@@ -307,8 +308,7 @@
     color: #111827;
   }
 
-  .manual-impressao,
-  .relatorio-impressao {
+  .manual-impressao {
     --background: #ffffff;
     --foreground: #111827;
     --card: #ffffff;
@@ -330,18 +330,5 @@
   /* Um pouco menos de espaço entre seções para caber melhor na folha. */
   .manual-impressao > * + * {
     margin-top: 0.75rem;
-  }
-
-  /*
-   * Relatório de cronograma: o cabeçalho da tabela repete em cada folha e as
-   * linhas (escalas, locais, membros) nunca são partidas ao meio.
-   */
-  .relatorio-impressao thead {
-    display: table-header-group;
-  }
-
-  .relatorio-impressao tr,
-  .relatorio-impressao li {
-    break-inside: avoid;
   }
 }
