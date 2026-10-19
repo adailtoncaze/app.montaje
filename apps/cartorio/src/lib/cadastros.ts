@@ -484,8 +484,12 @@ export function useEquipes(opcoes?: { enabled?: boolean }) {
   });
 }
 
-export function useLocaisCadastro() {
-  return useQuery({ queryKey: ['locais-cadastro'], queryFn: listarLocaisCadastro });
+export function useLocaisCadastro(opcoes?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['locais-cadastro'],
+    queryFn: listarLocaisCadastro,
+    enabled: opcoes?.enabled ?? true,
+  });
 }
 
 export function useCronograma(opcoes?: { enabled?: boolean }) {

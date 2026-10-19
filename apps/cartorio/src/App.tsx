@@ -9,6 +9,7 @@ import { LocalDetalhe } from '@/features/locais/LocalDetalhe';
 import { Equipes } from '@/features/equipes/Equipes';
 import { Cronograma } from '@/features/cronograma/Cronograma';
 import { SecaoDetalhe } from '@/features/secoes/SecaoDetalhe';
+import { RelatorioCronograma } from '@/features/relatorios/RelatorioCronograma';
 import { AppEquipe } from '@/features/app-equipe/AppEquipe';
 import { Manual } from '@/features/ajuda/Manual';
 
@@ -35,6 +36,7 @@ export function App() {
         <Route path="/locais/:localId/secoes/:secaoId" element={<SecaoDetalhe />} />
         <Route path="/equipes" element={<Equipes />} />
         <Route path="/cronograma" element={<Cronograma />} />
+        <Route path="/relatorios/cronograma" element={<RelatorioCronograma />} />
         <Route path="/app-equipe" element={<AppEquipe />} />
         <Route path="/manual" element={<Manual />} />
         {/* Rota antiga: mantém compatibilidade com links já compartilhados. */}

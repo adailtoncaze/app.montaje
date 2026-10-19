@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  FileText,
   House,
   Landmark,
   LogOut,
@@ -67,6 +68,7 @@ const NAVEGACAO: GrupoNavegacao[] = [
     itens: [
       { to: '/equipes', rotulo: 'Equipes', icone: UsersRound, exato: false },
       { to: '/cronograma', rotulo: 'Cronograma', icone: CalendarDays, exato: false },
+      { to: '/relatorios/cronograma', rotulo: 'Relatórios', icone: FileText, exato: false },
     ],
   },
   {
@@ -103,6 +105,9 @@ function migalhasDaRota(pathname: string): ItemBreadcrumb[] {
     migalhas.push({ rotulo: 'Equipes' });
   } else if (segmentos[0] === 'cronograma') {
     migalhas.push({ rotulo: 'Cronograma' });
+  } else if (segmentos[0] === 'relatorios') {
+    migalhas.push({ rotulo: 'Relatórios', to: '/relatorios/cronograma' });
+    migalhas.push({ rotulo: 'Cronograma de montagem' });
   } else if (segmentos[0] === 'app-equipe') {
     migalhas.push({ rotulo: 'App da equipe' });
   } else if (segmentos[0] === 'manual') {
