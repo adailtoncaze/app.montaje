@@ -132,6 +132,10 @@ order by m.lider desc, p.nome;
 - [ ] No painel → ***App da equipe*** (`/app-equipe`): **Imprimir** ou mostrar o **QR**.
 - [ ] Instalar o app nos **2 celulares** (QR, ou Ajustes → *Aplicativo* → *Instalar em outro aparelho*).
 - [ ] Login em cada um: matrícula `90001` / `90002` e código `teste123`.
+- [ ] Ligar a **rotação automática** nos 2 celulares (sem trava de rotação, nem trava por app).
+  - ✅ Confira girando o aparelho: a tela do app precisa acompanhar. Sem isso a câmera do app
+    não gira, o botão de capturar fica travado e a foto sai na vertical.
+- [ ] Permitir o uso da **câmera** quando o app pedir (a captura é feita dentro do app).
 - [ ] Com internet, tocar em **Ajustes → *Baixar dados do dia***.
   - ✅ Deve baixar **1 local** e **3 seções**, sem avisos.
 - [ ] Conferir em **Locais**: `Escola Municipal Teste Campo` com as seções 101/102/103.
@@ -148,6 +152,7 @@ A partir daqui, é só seguir o **[roteiro de campo](ROTEIRO-teste-campo.md)**.
 | Equipe criada mas não entra no app | *Confirm email* ligado no Supabase | Desligar e entrar de novo |
 | "Nenhum cronograma atribuído à sua equipe" | Escala não criada ou membro não vinculado | Refazer os passos 3 e 4 |
 | Local/Seções vazios após baixar | Baixou antes de criar a escala | Criar a escala e **Baixar dados do dia** novamente |
+| Botão de capturar travado mesmo girando o celular | Rotação automática desligada (ou trava de rotação por app) | Ligar a rotação automática e girar o aparelho **deitado** |
 | Seção sem itens de checklist | Seções criadas depois e sem materialização | Abrir a seção no painel ou rodar `rpc_materializar_secao` |
 
 ---

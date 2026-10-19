@@ -65,6 +65,7 @@ export const MANUAL_EQUIPE_CAMPO: Manual = {
             'Ajustes → **Baixar dados do dia**. Espere terminar. Se aparecer "Download incompleto", avise o cartório.',
             'Confira **Locais**: devem aparecer os locais da sua equipe.',
             'Vai usar no sol? Ajustes → **Uso sob o sol** (melhora a leitura).',
+            'Confira que a **rotação automática do aparelho está ligada** (sem trava de rotação): sem ela a câmera não gira e a foto sai na vertical.',
             'Recomendado: Ajustes → **Salvar backup no aparelho** e guarde o arquivo.',
           ],
         },
@@ -125,7 +126,7 @@ export const MANUAL_EQUIPE_CAMPO: Manual = {
         {
           tipo: 'lista',
           itens: [
-            'Fotografe com o aparelho **na horizontal** (deitado) — na vertical a foto perde metade da seção. Se o aparelho estiver em pé, o botão de capturar fica travado até girar.',
+            'Fotografe com o aparelho **na horizontal** (deitado) — na vertical a foto perde metade da seção. Se o aparelho estiver em pé, o botão de capturar fica travado até girar. Ele não girou? A **rotação automática** está desligada — ligue (veja a seção 1) e tente de novo.',
             '**Não fotografe pessoas** — enquadre só o ambiente (cartazes, mesa, urna/cabine).',
             'Foto escura, estourada, borrada ou na vertical: o app avisa → **Refazer** ou **Salvar assim mesmo**.',
             'A localização (GPS) é opcional e não bloqueia nada.',
@@ -161,6 +162,10 @@ export const MANUAL_EQUIPE_CAMPO: Manual = {
             },
             { situacao: 'Ficou sem internet', acao: 'Continue normalmente; o envio acontece depois.' },
             { situacao: 'Foto escura, borrada ou na vertical', acao: '**Refazer** a foto, com o aparelho deitado.' },
+            {
+              situacao: 'O aparelho não gira / a foto sai na vertical',
+              acao: 'Ligue a **rotação automática** (tire a trava de rotação) e gire o celular deitado.',
+            },
             {
               situacao: '"Correção solicitada" pelo cartório',
               acao: 'Abra a seção → item com etiqueta **Corrigir** → ajuste e reenvie.',

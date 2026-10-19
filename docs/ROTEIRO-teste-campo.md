@@ -34,6 +34,8 @@ exceção (correção, reabertura, sigilo não conforme, falha de envio).
 - [ ] Instalar o app nos **dois** celulares pelo QR (ou via Ajustes → *Aplicativo* →
       *Instalar em outro aparelho*).
 - [ ] Login em cada celular (matrícula + código do cartório).
+- [ ] Ligar a **rotação automática** nos dois aparelhos (sem trava de rotação) e permitir o uso da
+      **câmera**. Sem rotação automática a câmera do app não gira e o disparo fica travado (Fase 9).
 - [ ] **Conferir o cartão "Backup e armazenamento"** em Ajustes (selo verde = armazenamento
       protegido).
 - [ ] Fazer **"Baixar dados do dia"** em cada celular, ainda com internet.
