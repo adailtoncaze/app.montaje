@@ -18,8 +18,9 @@ import {
  * cabeçalho institucional, título centralizado, e — por equipe, que começa em
  * uma folha nova — membros e as tabelas de cada etapa/dia na ordem de visita.
  * As colunas são apenas campos existentes no sistema: sequência, local com
- * endereço, quantidade de seções, tipo de atividade e data. Horário, origem e
- * município do modelo ficam de fora até haver cadastro para eles.
+ * endereço (nome em negrito, endereço em corpo menor), quantidade de seções,
+ * tipo de atividade e data. Horário e origem do modelo ficam de fora até haver
+ * cadastro para eles; o município da zona é fixo (`MUNICIPIO`).
  *
  * Rodapé com emissão e paginação é carimbado em todas as folhas ao final, quando
  * o total de páginas é conhecido.
@@ -43,8 +44,10 @@ const TITULO_DOCUMENTO = 'Cronograma de Montagem de Seção';
 const ORGAO = 'Poder Judiciário';
 const CORTE = 'Tribunal Regional Eleitoral da Paraíba';
 const SISTEMA =
-  'MontaJE - Sistema de Gerenciamento de Cronograma de Montagem e Recolhimento';
-const ELEICOES = 'Eleições: 2026 · 1º Turno';
+  'MontaJE - Sistema de Gerenciamento e Acompanhamento de Montagem de Seção Eleitoral';
+const ELEICOES = 'Eleições: 2026 · 2º Turno';
+/** Município exibido ao lado do número da zona no subtítulo do documento. */
+const MUNICIPIO = 'Guarabira';
 
 const FORMATO_RODAPE = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -68,13 +71,20 @@ interface Estado {
 
 // ------------------------------------------------------------------ utilitários
 
-/** "Zona 1 · Período: 02/10/2026 a 24/10/2026" (só o que o recorte tem). */
+/** "Zona 1ª - Guarabira" — o sistema não cadastra o município da zona. */
+function rotuloZona(zona: number): string {
+  return `Zona ${zona}ª - ${MUNICIPIO}`;
+}
+
+/** "Zona 1ª - Guarabira · Período: 02/10/2026 a 24/10/2026" (só o que o recorte tem). */
 function subtituloRelatorio(relatorio: RelatorioCronograma): string {
   const partes: string[] = [];
   const { zonas, periodo } = relatorio;
-  if (zonas.length === 1) partes.push(`Zona ${zonas[0]}`);
+  if (zonas.length === 1) partes.push(rotuloZona(zonas[0]));
   else if (zonas.length > 1) {
-    partes.push(`Zonas ${zonas.slice(0, -1).join(', ')} e ${zonas[zonas.length - 1]}`);
+    partes.push(
+      `Zonas ${zonas.slice(0, -1).map(rotuloZona).join(', ')} e ${rotuloZona(zonas[zonas.length - 1])}`,
+    );
   }
   if (periodo.de || periodo.ate) partes.push(`Período: ${rotuloPeriodo(periodo)}`);
   return partes.join(' · ');
@@ -121,6 +131,39 @@ function garantirEspaco(doc: jsPDF, estado: Estado, mm: number): void {
   if (estado.y + mm <= BASE) return;
   novaFolha(doc, estado);
 }
+
+/**
+ * Fonte do corpo das tabelas e entrelinha enxuta (o nome do local e o endereço
+ * formam um bloco de duas linhas sem folga). Compartilhado com a reserva de
+ * espaço, para o cabeçalho da tabela + a primeira linha caberem na folha.
+ */
+const FONTE_TABELA = 8;
+const FONTE_ENDERECO_TABELA = 6.5;
+/**
+ * Fator de tinta: quanto do corpo a fonte realmente ocupa (ascent + descent).
+ * É a métrica usada para reservar altura, para o texto nunca transbordar.
+ */
+const TINTA_TABELA = 1.15;
+/** Padding vertical de cada célula (mm), somado à altura do texto. */
+const PADDING_CELULA = 1.2;
+
+/** Altura de tinta de uma linha (mm) — o que de fato precisa caber na célula. */
+const alturaTinta = (pt: number) => (pt * TINTA_TABELA * 25.4) / 72;
+
+/** Altura de uma linha de tabela (mm): nome + endereço + padding vertical. */
+const ALTURA_LINHA_TABELA =
+  alturaTinta(FONTE_TABELA) +
+  alturaTinta(FONTE_ENDERECO_TABELA) +
+  PADDING_CELULA * 2;
+/** Altura do cabeçalho da tabela (mm): uma linha de texto + padding. */
+const ALTURA_CABECALHO_TABELA = alturaTinta(FONTE_TABELA) + PADDING_CELULA * 2;
+
+/**
+ * Reserva o topo da tabela do dia: cabeçalho da tabela + a primeira linha do
+ * corpo. Sem isso a tabela poderia começar tão perto da BASE que a última
+ * linha cairia sobre o rodapé.
+ */
+const TOPO_MINIMO_TABELA = ALTURA_LINHA_TABELA * 3;
 
 /** Rodapé de todas as folhas: emissão e paginação (total conhecido só no fim). */
 function desenharRodape(doc: jsPDF, emitidoEm: Date): void {
@@ -174,6 +217,11 @@ function desenharTabelaDoDia(
   dia: DiaDocumento,
   etapa: EtapaDocumento,
 ): void {
+  // Corpo do nome do local e do endereço (menor), com a métrica de tinta
+  // compartilhada com a reserva de altura.
+  const FONTE = FONTE_TABELA;
+  const FONTE_ENDERECO = FONTE_ENDERECO_TABELA;
+
   autoTable(doc, {
     startY: estado.y,
     theme: 'grid',
@@ -182,27 +230,101 @@ function desenharTabelaDoDia(
     head: [['Seq.', 'Local de votação', 'Qtd. seções', 'Tipo de atividade', 'Data']],
     body: dia.escalas.map((escala) => [
       escala.ordem != null ? String(escala.ordem) : '—',
-      escala.local.endereco
-        ? `${escala.local.nome}\n${escala.local.endereco}`
-        : escala.local.nome,
+      escala.local.nome,
       String(escala.qtdSecoes),
       ROTULO_ETAPA[etapa.etapa],
       formatarDataCurta(dia.data),
     ]),
+    // Nome e endereço são desenhados juntos, como um bloco de duas linhas
+    // centralizado na célula — assim o nome não herda sozinho a centralização
+    // de uma linha só (que empurrava o texto para baixo, sobre a borda).
+    didDrawCell: (dados) => {
+      if (dados.section !== 'body' || dados.column.index !== 1) return;
+      const escala = dia.escalas[dados.row.index];
+      if (!escala) return;
+
+      const { cell } = dados;
+      const esquerda = cell.x + cell.padding('left');
+      const largura = cell.width - cell.padding('left') - cell.padding('right');
+      const topo = cell.y + cell.padding('top');
+      const alturaConteudo = cell.height - cell.padding('vertical');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(FONTE);
+      const linhasNome = doc.splitTextToSize(escala.local.nome, largura);
+      const endereco = escala.local.endereco?.trim();
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(FONTE_ENDERECO);
+      const linhasEndereco = endereco ? doc.splitTextToSize(endereco, largura) : [];
+
+      // Tinta de cada linha (ascent + descent). As duas faixas ficam
+      // encostadas, formando o bloco que é centralizado na caixa de conteúdo.
+      const alturaNome = alturaTinta(FONTE);
+      const alturaEndereco = alturaTinta(FONTE_ENDERECO);
+      const bloco =
+        linhasNome.length * alturaNome + linhasEndereco.length * alturaEndereco;
+
+      // Base da primeira linha: faixa de tinta com o topo na caixa de conteúdo.
+      let base = topo + Math.max(0, (alturaConteudo - bloco) / 2) + alturaNome * 0.8;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(FONTE);
+      doc.setTextColor(...TINTA_ESCURA);
+      for (const linha of linhasNome) {
+        doc.text(linha, esquerda, base);
+        base += alturaNome;
+      }
+
+      if (linhasEndereco.length) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(FONTE_ENDERECO);
+        doc.setTextColor(...TINTA_CINZA);
+        // Base do endereço em valor absoluto: logo abaixo da faixa do nome.
+        let baseEnd =
+          topo +
+          Math.max(0, (alturaConteudo - bloco) / 2) +
+          linhasNome.length * alturaNome +
+          alturaEndereco * 0.8;
+        for (const linha of linhasEndereco) {
+          doc.text(linha, esquerda, baseEnd);
+          baseEnd += alturaEndereco;
+        }
+      }
+
+      // Restaura a fonte do corpo para as demais células da mesma linha.
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(FONTE);
+      doc.setTextColor(...TINTA_ESCURA);
+    },
     styles: {
       font: 'helvetica',
-      fontSize: 8,
-      cellPadding: { top: 1.2, right: 1.5, bottom: 1.2, left: 1.5 },
+      fontSize: FONTE,
+      cellPadding: { top: PADDING_CELULA, right: 1.5, bottom: PADDING_CELULA, left: 1.5 },
       lineColor: [200, 200, 200],
       lineWidth: 0.1,
       textColor: TINTA_ESCURA,
       overflow: 'linebreak',
-      valign: 'top',
+      // Centraliza na vertical; a coluna do local ganha a linha do endereço.
+      valign: 'middle',
+      // Duas linhas justas (nome + endereço) já centralizadas pelo `valign`.
+      minCellHeight: ALTURA_LINHA_TABELA,
+    },
+    // A coluna do local é desenhada à mão em `didDrawCell`; o autoTable não
+    // deve desenhar nada nela (o texto vazio só reserva a altura da linha).
+    willDrawCell: (dados) => {
+      if (dados.section === 'head') return;
+      if (dados.section === 'body' && dados.column.index === 1) {
+        dados.cell.text = [];
+      }
+      doc.setFont('helvetica', 'normal');
     },
     headStyles: {
       fillColor: [244, 244, 245],
       fontStyle: 'bold',
       textColor: TINTA_ESCURA,
+      valign: 'middle',
+      // Mesma altura das linhas do corpo: sem folga entre cabeçalho e dados.
+      minCellHeight: ALTURA_CABECALHO_TABELA,
     },
     columnStyles: {
       0: { cellWidth: 12, halign: 'center' },
@@ -237,8 +359,8 @@ function desenharEtapa(doc: jsPDF, estado: Estado, bloco: EtapaDocumento): void 
   estado.y += 8;
 
   for (const dia of bloco.dias) {
-    // Título do dia + cabeçalho + ao menos uma linha da tabela.
-    garantirEspaco(doc, estado, 18);
+    // Título do dia + cabeçalho da tabela + a primeira linha da tabela.
+    garantirEspaco(doc, estado, 5.5 + TOPO_MINIMO_TABELA);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(...TINTA_ESCURA);

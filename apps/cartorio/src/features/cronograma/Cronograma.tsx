@@ -338,13 +338,13 @@ function CartaoDia({
           {escalas.map((escala) => (
             <li
               key={escala.id}
-              className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-3"
+              className="flex items-center justify-between gap-3 border-t border-border py-3"
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <Badge variant={escala.etapa === 1 ? 'brand' : 'warning'}>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Badge variant={escala.etapa === 1 ? 'brand' : 'warning'} className="shrink-0">
                   Etapa {escala.etapa}
                 </Badge>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground">
                     {escala.equipeNome ?? 'Equipe removida'}
                   </p>
@@ -354,7 +354,7 @@ function CartaoDia({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 {escala.ordem != null && (
                   <Badge variant="secondary">Ordem {escala.ordem}</Badge>
                 )}

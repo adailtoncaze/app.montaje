@@ -16,7 +16,7 @@ import { dataLocal, formatarDataCurta } from '@/lib/datas';
 /** Rótulos das etapas, mesmos nomes das abas do detalhe da seção. */
 export const ROTULO_ETAPA: Record<Etapa, string> = {
   1: 'Etapa 1 — Montagem',
-  2: 'Etapa 2 — Sigilo do voto',
+  2: 'Etapa 2 — Instalação da Urna',
 };
 
 const FORMATO_DIA = new Intl.DateTimeFormat('pt-BR', {

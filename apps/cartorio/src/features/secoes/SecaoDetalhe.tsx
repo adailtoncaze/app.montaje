@@ -875,7 +875,7 @@ export function SecaoDetalhe() {
       <Tabs value={String(etapa)} onValueChange={(v) => setEtapa(Number(v) as Etapa)}>
         <TabsList className="grid w-full grid-cols-2 sm:max-w-md">
           <TabsTrigger value="1">Etapa 1 · Montagem</TabsTrigger>
-          <TabsTrigger value="2">Etapa 2 · Sigilo do voto</TabsTrigger>
+          <TabsTrigger value="2">Etapa 2 · Instalação da Urna</TabsTrigger>
         </TabsList>
       </Tabs>
 

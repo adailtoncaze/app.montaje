@@ -175,7 +175,7 @@ export function RelatorioCronograma() {
               <SelectContent>
                 <SelectItem value="todas">Todas as etapas</SelectItem>
                 <SelectItem value="1">Etapa 1 — Montagem</SelectItem>
-                <SelectItem value="2">Etapa 2 — Sigilo do voto</SelectItem>
+                <SelectItem value="2">Etapa 2 — Instalação da Urna</SelectItem>
               </SelectContent>
             </Select>
           </div>
