@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { adicionarSecao, atualizarLocal, criarLocal } from '@/lib/cadastros';
+import { adicionarSecao, atualizarLocal, criarLocal, excluirSecao } from '@/lib/cadastros';
 import { mensagemDeErro } from '@/lib/avisos';
+import type { SecaoResumo } from '@/lib/dados';
 
 /**
  * Conversa uma lista escrita pelo operador ("101, 102 103") em números.
@@ -434,5 +435,94 @@ export function DialogoNovaSecao({
         </div>
       </form>
     </DialogoBase>
+  );
+}
+
+/**
+ * Confirma a exclusão de uma seção do local. Exclui em cascata o checklist,
+ * as fotos, as respostas de sigilo e o histórico de validações da seção —
+ * por isso pede confirmação explícita antes de agir.
+ */
+export function DialogoExcluirSecao({
+  secao,
+  onFechar,
+}: {
+  /** A seção a excluir; o diálogo fica fechado enquanto for `null`. */
+  secao: SecaoResumo | null;
+  onFechar: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  function fechar() {
+    if (enviando) return;
+    setErro(null);
+    onFechar();
+  }
+
+  async function excluir() {
+    if (!secao) return;
+
+    setErro(null);
+    setEnviando(true);
+    try {
+      await excluirSecao(secao.local_id, secao.id);
+      toast.success(`Seção ${secao.numero} excluída`, {
+        description: 'O checklist, as fotos e as validações da seção também foram removidos.',
+      });
+      fechar();
+      await queryClient.invalidateQueries({ queryKey: ['secoes'] });
+      await queryClient.invalidateQueries({ queryKey: ['locais-cadastro'] });
+    } catch (causa) {
+      const mensagem = mensagemDeErro(causa, 'Não foi possível excluir a seção.');
+      setErro(mensagem);
+      toast.error('Não foi possível excluir a seção', { description: mensagem });
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <Dialog open={secao !== null} onOpenChange={(v) => !v && fechar()}>
+      <DialogContent className="max-w-lg p-0">
+        <div className="border-b border-border p-5 pr-14">
+          <DialogTitle>Excluir a seção {secao?.numero}?</DialogTitle>
+          <DialogDescription>
+            A seção sai do local de votação junto com o checklist, as fotos, as respostas de
+            sigilo e o histórico de validações. Esta ação não pode ser desfeita.
+          </DialogDescription>
+        </div>
+
+        <div className="flex flex-col gap-4 p-5">
+          {erro && (
+            <Alert variant="destructive">
+              <AlertIcon>
+                <TriangleAlert />
+              </AlertIcon>
+              <div className="flex flex-col gap-1">
+                <AlertTitle>Não foi possível excluir</AlertTitle>
+                <AlertDescription>{erro}</AlertDescription>
+              </div>
+            </Alert>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={fechar} disabled={enviando}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void excluir()}
+              disabled={enviando}
+            >
+              {enviando && <LoaderCircle className="animate-spin" />}
+              Excluir seção
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

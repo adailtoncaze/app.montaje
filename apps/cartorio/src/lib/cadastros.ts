@@ -337,6 +337,59 @@ export async function adicionarSecao(localId: string, numero: number): Promise<v
   }
 }
 
+/**
+ * Apaga no bucket privado 'evidencias' as fotos sob `{secaoId}/` (melhor
+ * esforço). A cascata do banco remove as linhas de `evidencias`, mas os
+ * arquivos do Storage não são apagados automaticamente.
+ */
+async function removerFotosDaSecao(secaoId: string): Promise<void> {
+  try {
+    const sb = supabase();
+    const { data: pastas } = await sb.storage.from('evidencias').list(secaoId, { limit: 1000 });
+
+    const caminhos: string[] = [];
+    for (const pasta of pastas ?? []) {
+      // Placeholders do Storage (ex.: `.emptyFolderPlaceholder`) não são pastas.
+      if (pasta.name.startsWith('.')) continue;
+      const { data: arquivos } = await sb.storage
+        .from('evidencias')
+        .list(`${secaoId}/${pasta.name}`, { limit: 1000 });
+      for (const arquivo of arquivos ?? []) {
+        caminhos.push(`${secaoId}/${pasta.name}/${arquivo.name}`);
+      }
+    }
+
+    if (caminhos.length) await sb.storage.from('evidencias').remove(caminhos);
+  } catch {
+    // A seção já saiu do banco; fotos órfãs não podem travar a exclusão.
+  }
+}
+
+/**
+ * Exclui uma seção do local de votação.
+ *
+ * O banco remove em cascata o checklist (`itens_checklist`), as linhas de
+ * `evidencias`, os `desvios`, as `respostas_sigilo` e as `validacoes`
+ * (todos com `on delete cascade` em `secoes`). As fotos no bucket seguem
+ * em `removerFotosDaSecao`, depois da exclusão: se a limpeza falhar, a
+ * seção não "ressuscita".
+ */
+export async function excluirSecao(localId: string, secaoId: string): Promise<void> {
+  const { data, error } = await supabase()
+    .from('secoes')
+    .delete()
+    .eq('id', secaoId)
+    .eq('local_id', localId)
+    .select('id');
+  if (error) throw new Error(traduzirErro(error.message, 'Não foi possível excluir a seção.'));
+  // A RLS pode devolver zero linhas em silêncio (perfil sem permissão).
+  if (!data?.length) {
+    throw new Error('Nenhuma seção removida. Verifique sua permissão de administrador.');
+  }
+
+  await removerFotosDaSecao(secaoId);
+}
+
 export async function criarEscala(input: CriarEscalaInput): Promise<void> {
   const { error } = await supabase().from('cronograma').insert({
     data: input.data,

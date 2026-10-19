@@ -92,7 +92,6 @@ interface ItemResumo {
 
 export async function listarSecoes(): Promise<SecaoResumo[]> {
   const sb = supabase();
-
   const [secoesRes, itens, evidencias] = await Promise.all([
     sb
       .from('secoes')
@@ -142,6 +141,27 @@ export async function listarSecoes(): Promise<SecaoResumo[]> {
   }));
 }
 
+async function listarLocaisResumo(): Promise<LocalResumo[]> {
+  const { data, error } = await supabase()
+    .from('locais')
+    .select('id, zona, nome, endereco')
+    .order('zona')
+    .order('nome')
+    .returns<LocalResumo[]>();
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * Painel: todos os locais cadastrados (inclusive os que estão sem seção) com
+ * as seções agregadas. As telas invalidam `['secoes']` depois de qualquer
+ * escrita, então esta consulta também é recarregada junto.
+ */
+export async function listarPainel(): Promise<LocalComSecoes[]> {
+  const [locais, secoes] = await Promise.all([listarLocaisResumo(), listarSecoes()]);
+  return agruparPorLocal(secoes, locais);
+}
+
 // ------------------------------------------------------------------ agregação
 
 /** Um local de votação com suas seções e os totais que o cartório acompanha. */
@@ -171,9 +191,35 @@ export interface LocalComSecoes {
 /**
  * Agrupa as seções por local de votação. O painel lista e navega sempre por
  * local (unidade de trabalho da equipe), e só então desce para as seções.
+ *
+ * `locais` mantém no painel os locais que ficaram sem nenhuma seção (ex.:
+ * depois de excluir a última) — sem isso eles sumiriam das telas e não
+ * haveria como cadastrar uma seção nova.
  */
-export function agruparPorLocal(secoes: SecaoResumo[]): LocalComSecoes[] {
+export function agruparPorLocal(
+  secoes: SecaoResumo[],
+  locais: LocalResumo[] = [],
+): LocalComSecoes[] {
   const mapa = new Map<string, LocalComSecoes>();
+
+  for (const local of locais) {
+    mapa.set(local.id, {
+      id: local.id,
+      zona: local.zona,
+      nome: local.nome,
+      endereco: local.endereco,
+      secoes: [],
+      totalSecoes: 0,
+      aguardando: 0,
+      correcoes: 0,
+      naoConformes: 0,
+      concluidas: 0,
+      fotos: 0,
+      situacao: 'concluida',
+      totalItens: 0,
+      itensConcluidos: 0,
+    });
+  }
 
   for (const secao of secoes) {
     const chave = secao.local?.id ?? 'sem-local';
@@ -401,15 +447,14 @@ export async function reabrirEtapa(
 // ------------------------------------------------------------------ hooks
 
 export function useSecoes() {
-  return useQuery({ queryKey: ['secoes'], queryFn: listarSecoes });
+  return useQuery({ queryKey: ['secoes-bruto'], queryFn: listarSecoes });
 }
 
-/** Locais de votação com as seções agregadas (mesma consulta de `useSecoes`). */
+/** Locais de votação com as seções agregadas (inclui locais sem nenhuma seção). */
 export function useLocais() {
   return useQuery({
     queryKey: ['secoes'],
-    queryFn: listarSecoes,
-    select: agruparPorLocal,
+    queryFn: listarPainel,
   });
 }
 

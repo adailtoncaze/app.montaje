@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
+  Trash2,
   TriangleAlert,
   X,
 } from 'lucide-react';
@@ -45,7 +46,11 @@ import { StatCard } from '@/components/stat-card';
 import { ROTULO_STATUS_ETAPA, type StatusEtapa } from '@montaje/core';
 import { useAvisoErro } from '@/lib/avisos';
 import { useLocais, type SecaoResumo } from '@/lib/dados';
-import { DialogoEditarLocal, DialogoNovaSecao } from '@/features/locais/DialogosCadastro';
+import {
+  DialogoEditarLocal,
+  DialogoExcluirSecao,
+  DialogoNovaSecao,
+} from '@/features/locais/DialogosCadastro';
 import { useSessao } from '@/features/auth/store';
 import {
   classeAcento,
@@ -64,54 +69,80 @@ const STATUS: StatusEtapa[] = [
   'correcao_solicitada',
 ];
 
-function CartaoSecao({ secao }: { secao: SecaoResumo }) {
+function CartaoSecao({
+  secao,
+  onExcluir,
+}: {
+  secao: SecaoResumo;
+  /** Presente apenas para o administrador — abre a exclusão da seção. */
+  onExcluir?: (secao: SecaoResumo) => void;
+}) {
   const situacao = situacaoSecao(secao);
   const naoConforme = !secao.conforme;
   const tom = tomSituacao(situacao);
 
   return (
-    <Link
-      to={`/locais/${secao.local_id}/secoes/${secao.id}`}
-      className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-    >
-      <Card className="h-full overflow-hidden transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-teams-8">
-        <span aria-hidden className={cn('h-1 w-full shrink-0', classeAcento(tom))} />
-        <CardHeader>
-          <div className="flex min-w-0 items-start gap-3">
-            <Medalhao tom={tom}>{secao.numero}</Medalhao>
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <CardTitle>Seção {secao.numero}</CardTitle>
-              <CardDescription>
-                {secao.itensConcluidos}/{secao.totalItens} itens · {secao.fotos} foto(s)
-              </CardDescription>
+    <div className="relative h-full">
+      <Link
+        to={`/locais/${secao.local_id}/secoes/${secao.id}`}
+        className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        <Card className="h-full overflow-hidden transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-teams-8">
+          <span aria-hidden className={cn('h-1 w-full shrink-0', classeAcento(tom))} />
+          <CardHeader className={cn(onExcluir && 'pr-14')}>
+            <div className="flex min-w-0 items-start gap-3">
+              <Medalhao tom={tom}>{secao.numero}</Medalhao>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <CardTitle>Seção {secao.numero}</CardTitle>
+                <CardDescription>
+                  {secao.itensConcluidos}/{secao.totalItens} itens · {secao.fotos} foto(s)
+                </CardDescription>
+              </div>
             </div>
-          </div>
-          <Badge variant={tom}>{ROTULO_SITUACAO[situacao]}</Badge>
-        </CardHeader>
+            <Badge variant={tom}>{ROTULO_SITUACAO[situacao]}</Badge>
+          </CardHeader>
 
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={tomStatusEtapa(secao.status_etapa1)}>
-              E1: {ROTULO_STATUS_ETAPA[secao.status_etapa1]}
-            </Badge>
-            <Badge variant={tomStatusEtapa(secao.status_etapa2)}>
-              E2: {ROTULO_STATUS_ETAPA[secao.status_etapa2]}
-            </Badge>
-          </div>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={tomStatusEtapa(secao.status_etapa1)}>
+                E1: {ROTULO_STATUS_ETAPA[secao.status_etapa1]}
+              </Badge>
+              <Badge variant={tomStatusEtapa(secao.status_etapa2)}>
+                E2: {ROTULO_STATUS_ETAPA[secao.status_etapa2]}
+              </Badge>
+            </div>
 
-          {naoConforme && (
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
-              <TriangleAlert className="size-3.5" />
-              Sigilo do voto não conforme
-            </p>
-          )}
+            {naoConforme && (
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
+                <TriangleAlert className="size-3.5" />
+                Sigilo do voto não conforme
+              </p>
+            )}
 
-          {secao.totalItens > 0 && (
-            <Progresso concluidos={secao.itensConcluidos} total={secao.totalItens} />
-          )}
-        </CardContent>
-      </Card>
-    </Link>
+            {secao.totalItens > 0 && (
+              <Progresso concluidos={secao.itensConcluidos} total={secao.totalItens} />
+            )}
+          </CardContent>
+        </Card>
+      </Link>
+
+      {onExcluir && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 z-10 text-muted-foreground hover:text-danger"
+              onClick={() => onExcluir(secao)}
+              aria-label={`Excluir a seção ${secao.numero}`}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Excluir a seção</TooltipContent>
+        </Tooltip>
+      )}
+    </div>
   );
 }
 
@@ -149,6 +180,7 @@ export function LocalDetalhe() {
   const [soNaoConformes, setSoNaoConformes] = useState(false);
   const [novaSecao, setNovaSecao] = useState(false);
   const [editando, setEditando] = useState(false);
+  const [secaoExcluindo, setSecaoExcluindo] = useState<SecaoResumo | null>(null);
 
   const local = useMemo(() => data?.find((l) => l.id === localId), [data, localId]);
 
@@ -398,7 +430,11 @@ export function LocalDetalhe() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {filtradas.map((secao) => (
-            <CartaoSecao key={secao.id} secao={secao} />
+            <CartaoSecao
+              key={secao.id}
+              secao={secao}
+              onExcluir={podeCadastrar ? setSecaoExcluindo : undefined}
+            />
           ))}
         </div>
       )}
@@ -413,6 +449,11 @@ export function LocalDetalhe() {
         local={local}
         aberto={editando}
         onFechar={() => setEditando(false)}
+      />
+
+      <DialogoExcluirSecao
+        secao={secaoExcluindo}
+        onFechar={() => setSecaoExcluindo(null)}
       />
     </div>
   );
