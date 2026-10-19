@@ -76,3 +76,39 @@ export const temaEscuro: Theme = {
   colorBrandForeground2Hover: '#e0e7ff',
   colorBrandForeground2Pressed: '#eef2ff',
 };
+
+/**
+ * APP-28 — tema "sol": alto contraste para leitura sob luz forte.
+ *
+ * Parte do tema claro e força:
+ *  - texto em preto sobre fundo branco puro (sem cinzas que "lavam" no sol);
+ *  - contornos mais escuros e mais grossos (bordas continuam visíveis com brilho);
+ *  - marca em índigo escuro, legível como texto sobre branco.
+ */
+export const temaSol: Theme = {
+  ...temaClaro,
+  colorNeutralForeground1: '#000000',
+  colorNeutralForeground2: '#141414',
+  colorNeutralForeground3: '#333333',
+  colorNeutralForeground4: '#4d4d4d',
+  colorNeutralForegroundDisabled: '#6b6b6b',
+  colorNeutralForegroundInverted: '#ffffff',
+  colorNeutralForegroundOnBrand: '#ffffff',
+  colorNeutralBackground1: '#ffffff',
+  colorNeutralBackground2: '#ffffff',
+  colorNeutralBackground3: '#f2f2f2',
+  colorNeutralBackground4: '#e8e8e8',
+  colorNeutralBackground5: '#dedede',
+  colorNeutralBackground6: '#d5d5d5',
+  colorNeutralStroke1: '#000000',
+  colorNeutralStroke2: '#5c5c5c',
+  colorNeutralStroke3: '#808080',
+  colorNeutralStrokeAccessible: '#000000',
+  colorNeutralStrokeDisabled: '#a3a3a3',
+  colorBrandForeground1: '#312e81',
+  colorBrandForeground2: '#312e81',
+  colorBrandForegroundLink: '#312e81',
+  colorStrokeFocus2: '#000000',
+  strokeWidthThin: '1.5px',
+  strokeWidthThick: '2.5px',
+};

@@ -32,14 +32,18 @@
         try {
           var preferencia = localStorage.getItem('montaje.equipe.tema');
           var tema = preferencia === 'claro' || preferencia === 'escuro' ? preferencia : 'sistema';
+          // APP-28 — o modo sol é sempre claro e tem precedência sobre o escuro.
+          var modoSol = localStorage.getItem('montaje.equipe.contraste') === 'sol';
           var escuro =
-            tema === 'escuro' ||
-            (tema === 'sistema' &&
-              window.matchMedia('(prefers-color-scheme: dark)').matches);
+            !modoSol &&
+            (tema === 'escuro' ||
+              (tema === 'sistema' &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches));
           document.documentElement.dataset.tema = escuro ? 'escuro' : 'claro';
+          document.documentElement.dataset.contraste = modoSol ? 'sol' : 'padrao';
           document.documentElement.style.colorScheme = escuro ? 'dark' : 'light';
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', escuro ? '#100e25' : '#4f46e5');
+          if (meta) meta.setAttribute('content', escuro ? '#100e25' : modoSol ? '#312e81' : '#4f46e5');
         } catch (e) {
           /* sem armazenamento disponível — segue o padrão do sistema */
         }

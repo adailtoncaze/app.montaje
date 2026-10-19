@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
   Radio,
   RadioGroup,
+  Switch,
   Text,
   makeStyles,
   tokens,
@@ -70,7 +71,7 @@ const useClasses = makeStyles({
     display: 'inline-flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
-    minHeight: '32px',
+    minHeight: '44px',
   },
   dados: {
     display: 'flex',
@@ -98,7 +99,7 @@ export function Configuracoes() {
   const avisos = useAvisos();
   const perfil = useSessao((s) => s.perfil);
   const definirPerfil = useSessao((s) => s.definirPerfil);
-  const { tema, definirTema } = useTema();
+  const { tema, definirTema, modoSol, definirModoSol } = useTema();
   const { instalado } = useInstalarPWA();
 
   const [baixando, setBaixando] = useState(false);
@@ -290,6 +291,27 @@ export function Configuracoes() {
               }
             />
           </RadioGroup>
+        </Cartao>
+
+        <Cartao
+          inicio={
+            <Medalhao tom={modoSol ? 'ok' : 'neutro'}>
+              <WeatherSunny24Regular />
+            </Medalhao>
+          }
+          titulo="Uso sob o sol"
+          descricao="Aumenta o contraste e o destaque dos contornos para ler a tela na rua."
+        >
+          <div className={c.dados}>
+            <Switch
+              checked={modoSol}
+              onChange={(_evento, dados) => definirModoSol(dados.checked)}
+              label={modoSol ? 'Modo sol ligado' : 'Modo sol desligado'}
+            />
+            <Text size={200} className={c.rotulo}>
+              Fundo branco e textos/bordas mais escuros — pensado para ambientes muito claros.
+            </Text>
+          </div>
         </Cartao>
 
         <Cartao titulo="Dados no aparelho">

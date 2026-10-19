@@ -19,6 +19,7 @@ import {
 import { CameraApp } from '@/features/midia/CameraApp';
 import { processarFoto } from '@/features/midia/compressao';
 import { obterLocalizacao } from '@/features/midia/geo';
+import { avaliarQualidade, ROTULO_PROBLEMA, type QualidadeFoto } from '@/features/midia/qualidade';
 import { useSessao } from '@/features/auth/store';
 import { useObjectUrl } from '@/lib/use-object-url';
 import { useAvisos } from '@/lib/avisos';
@@ -128,42 +129,58 @@ export function ItemFoto({
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [cameraAberta, setCameraAberta] = useState(false);
+  /** Foto processada aguardando a decisão do usuário (checagem de qualidade). */
+  const [pendente, setPendente] = useState<
+    { blob: Blob; thumb: Blob; qualidade: QualidadeFoto } | null
+  >(null);
 
   const evidencia = useLiveQuery(() => evidenciaDoItem(item.id), [item.id]);
   const previa = useObjectUrl(evidencia?.thumbBlob);
+  const previaPendente = useObjectUrl(pendente?.blob);
 
   const temFoto = Boolean(evidencia);
 
-  /** Comprime, grava a foto e anexa a localização (em segundo plano). */
+  /** Grava a foto já processada e anexa a localização (em segundo plano). */
+  async function gravarFoto(foto: { blob: Blob; thumb: Blob }) {
+    const evidenciaId = await salvarFotoDoItem(item.id, secaoId, {
+      blob: foto.blob,
+      thumbBlob: foto.thumb,
+      capturadaEm: new Date().toISOString(),
+      latitude: null,
+      longitude: null,
+      autorId: perfil?.id ?? null,
+    });
+    await marcarEmMontagem(secaoId, item.etapa);
+    avisos.sucesso('Foto registrada', item.nome);
+
+    // A localização é opcional: buscada em segundo plano e anexada à evidência.
+    void obterLocalizacao()
+      .then((coordenada) => {
+        if (coordenada) {
+          return atualizarGeolocalizacaoDaEvidencia(evidenciaId, coordenada);
+        }
+        return undefined;
+      })
+      .catch(() => undefined);
+  }
+
+  /**
+   * Comprime e, antes de gravar, checa a qualidade (APP-15). Quando a foto
+   * parece escura/estourada/borrada, ela fica pendente e o usuário decide entre
+   * refazer ou salvar assim mesmo — nada é gravado sem essa confirmação.
+   */
   async function processarESalvar(origem: Blob) {
     setErro(null);
+    setPendente(null);
     setProcessando(true);
     try {
-      // Comprime a imagem antes de gravar (normaliza tamanho e qualidade).
       const foto = await processarFoto(origem);
-
-      // Grava a foto imediatamente, sem esperar o GPS: a evidência nunca se perde
-      // por causa de sinal ruim e a prévia aparece na hora.
-      const evidenciaId = await salvarFotoDoItem(item.id, secaoId, {
-        blob: foto.blob,
-        thumbBlob: foto.thumb,
-        capturadaEm: new Date().toISOString(),
-        latitude: null,
-        longitude: null,
-        autorId: perfil?.id ?? null,
-      });
-      await marcarEmMontagem(secaoId, item.etapa);
-      avisos.sucesso('Foto registrada', item.nome);
-
-      // A localização é opcional: buscada em segundo plano e anexada à evidência.
-      void obterLocalizacao()
-        .then((coordenada) => {
-          if (coordenada) {
-            return atualizarGeolocalizacaoDaEvidencia(evidenciaId, coordenada);
-          }
-          return undefined;
-        })
-        .catch(() => undefined);
+      const qualidade = await avaliarQualidade(foto.blob);
+      if (!qualidade.ok) {
+        setPendente({ blob: foto.blob, thumb: foto.thumb, qualidade });
+        return;
+      }
+      await gravarFoto(foto);
     } catch (causa) {
       console.error('[ItemFoto] falha ao processar/salvar a foto', causa);
       const detalhe =
@@ -175,6 +192,29 @@ export function ItemFoto({
     } finally {
       setProcessando(false);
     }
+  }
+
+  /** Salva a foto pendente mesmo com o alerta de qualidade. */
+  async function salvarAssimMesmo() {
+    if (!pendente) return;
+    const foto = { blob: pendente.blob, thumb: pendente.thumb };
+    setPendente(null);
+    setProcessando(true);
+    try {
+      await gravarFoto(foto);
+    } catch (causa) {
+      console.error('[ItemFoto] falha ao salvar a foto confirmada', causa);
+      setErro('Não foi possível salvar a foto. Tente novamente.');
+      avisos.erro('Falha ao salvar a foto', item.nome);
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  /** Descarta a foto pendente e reabre a captura. */
+  function refazerPendente() {
+    setPendente(null);
+    abrirCaptura();
   }
 
   /** Abre a câmera no app; em contexto inseguro/sem suporte, cai para o input de arquivo. */
@@ -235,33 +275,94 @@ export function ItemFoto({
 
         {erro && <Aviso tom="erro">{erro}</Aviso>}
 
-        {previa ? (
-          <div className={c.previaWrap}>
-            <img className={c.previa} src={previa} alt={`Prévia da foto do item: ${item.nome}`} />
-            {processando && <div className={c.carregando}>Salvando…</div>}
-          </div>
-        ) : (
-          <div className={c.vazio}>
-            <Camera24Regular className={c.vazioIcone} />
-            <Text size={200}>Nenhuma foto registrada</Text>
-            <Text size={200}>Toque em “Tirar foto” para capturar.</Text>
-          </div>
-        )}
-
-        {evidencia && (
-          <div className={c.info}>
-            <Text size={200}>{formatarQuando(evidencia.capturada_em)}</Text>
-            {evidencia.latitude != null && evidencia.longitude != null ? (
-              <>
-                <Location24Regular />
-                <Text size={200}>
-                  {evidencia.latitude.toFixed(5)}, {evidencia.longitude.toFixed(5)}
-                </Text>
-              </>
-            ) : (
-              <Text size={200}>Localização não disponível</Text>
+        {pendente ? (
+          <>
+            {previaPendente && (
+              <div className={c.previaWrap}>
+                <img className={c.previa} src={previaPendente} alt="Prévia da foto capturada" />
+              </div>
             )}
-          </div>
+
+            <Aviso tom="alerta" titulo="Confira a foto antes de salvar">
+              <Text size={200}>
+                A foto parece{' '}
+                {pendente.qualidade.problemas.map((p) => ROTULO_PROBLEMA[p]).join(' e ')}. Você
+                pode refazer ou usá-la assim mesmo.
+              </Text>
+            </Aviso>
+
+            <div className={c.acoes}>
+              <Botao
+                variante="secundario"
+                icon={<ArrowClockwise24Regular />}
+                onClick={refazerPendente}
+                disabled={processando}
+              >
+                Refazer
+              </Botao>
+              <Botao variante="primario" carregando={processando} onClick={salvarAssimMesmo}>
+                Salvar assim mesmo
+              </Botao>
+            </div>
+          </>
+        ) : (
+          <>
+            {previa ? (
+              <div className={c.previaWrap}>
+                <img
+                  className={c.previa}
+                  src={previa}
+                  alt={`Prévia da foto do item: ${item.nome}`}
+                />
+                {processando && <div className={c.carregando}>Salvando…</div>}
+              </div>
+            ) : (
+              <div className={c.vazio}>
+                <Camera24Regular className={c.vazioIcone} />
+                <Text size={200}>Nenhuma foto registrada</Text>
+                <Text size={200}>Toque em “Tirar foto” para capturar.</Text>
+              </div>
+            )}
+
+            {evidencia && (
+              <div className={c.info}>
+                <Text size={200}>{formatarQuando(evidencia.capturada_em)}</Text>
+                {evidencia.latitude != null && evidencia.longitude != null ? (
+                  <>
+                    <Location24Regular />
+                    <Text size={200}>
+                      {evidencia.latitude.toFixed(5)}, {evidencia.longitude.toFixed(5)}
+                    </Text>
+                  </>
+                ) : (
+                  <Text size={200}>Localização não disponível</Text>
+                )}
+              </div>
+            )}
+
+            <div className={c.acoes}>
+              <Botao
+                variante={temFoto ? 'secundario' : 'primario'}
+                carregando={processando}
+                disabled={somenteLeitura}
+                icon={temFoto ? <ArrowClockwise24Regular /> : <Camera24Regular />}
+                onClick={abrirCaptura}
+              >
+                {temFoto ? 'Refazer' : 'Tirar foto'}
+              </Botao>
+
+              {temFoto && (
+                <Botao
+                  variante="sutil"
+                  icon={<Delete24Regular />}
+                  onClick={aoRemover}
+                  disabled={processando || somenteLeitura}
+                >
+                  Remover
+                </Botao>
+              )}
+            </div>
+          </>
         )}
 
         <input
@@ -274,29 +375,6 @@ export function ItemFoto({
           tabIndex={-1}
           aria-hidden
         />
-
-        <div className={c.acoes}>
-          <Botao
-            variante={temFoto ? 'secundario' : 'primario'}
-            carregando={processando}
-            disabled={somenteLeitura}
-            icon={temFoto ? <ArrowClockwise24Regular /> : <Camera24Regular />}
-            onClick={abrirCaptura}
-          >
-            {temFoto ? 'Refazer' : 'Tirar foto'}
-          </Botao>
-
-          {temFoto && (
-            <Botao
-              variante="sutil"
-              icon={<Delete24Regular />}
-              onClick={aoRemover}
-              disabled={processando || somenteLeitura}
-            >
-              Remover
-            </Botao>
-          )}
-        </div>
       </div>
 
       {cameraAberta && (

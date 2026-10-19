@@ -112,7 +112,15 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
   - ✅ Aparece o aviso **"Etapa reaberta pelo cartório"**.
 - [ ] **A**: revisar o checklist (dados/fotos permanecem) e reenviar.
 
-### Fase 9 — Resiliência (o que mais importa em campo)
+### Fase 9 — Qualidade da foto (APP-15) e modo sol (APP-28)
+- [ ] **A** (ainda offline): tirar uma foto **sem foco** (mão tremendo) ou com a **lente tampada**.
+  - ✅ O app avisa que a foto parece *escura*/*borrada* e oferece **Refazer** ou **Salvar assim mesmo**.
+  - ✅ Nada é gravado antes da escolha.
+- [ ] **A**: tocar **Salvar assim mesmo** e conferir que a foto ficou registrada normalmente.
+- [ ] **A**: Ajustes → **Uso sob o sol** → ligar o **Modo sol** e conferir a leitura na rua.
+  - ✅ Fundo branco, textos e contornos bem mais escuros; a preferência fica salva.
+
+### Fase 10 — Resiliência (o que mais importa em campo)
 - [ ] **A**: durante o preenchimento, **fechar o app** (ou "matar" pelo gerenciador) e reabrir.
   - ✅ O que já foi preenchido continua lá (nada se perde).
 - [ ] **A**: **reiniciar o celular** com dados pendentes.
@@ -124,7 +132,7 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
 - [ ] (Opcional, em aparelho de teste) restaurar o backup no **B** e confirmar que a lista de
       locais/itens volta.
 
-### Fase 10 — Encerramento
+### Fase 11 — Encerramento
 - [ ] **[C]**: confirmar que todas as seções do teste aparecem corretamente no painel
       (Fotos, respostas, desvios, histórico de validações).
 - [ ] Preencher a **folha de registro** (seção 6) e arquivar prints dos erros.
@@ -142,7 +150,7 @@ Legenda: **A** / **B** = celular; **[C]** = painel do cartório. ✅ = resultado
 | 5 | Sigilo "Não" → não conforme + desvio obrigatório | Etapa 2 |
 | 6 | Devolução e reabertura aparecem na equipe | Aviso na tela da seção |
 | 7 | Consumo de bateria e espaço ao tirar várias fotos | Celular |
-| 8 | Legibilidade no sol (se `APP-28` não entrar) | Tela |
+| 8 | Legibilidade no sol com o **modo sol** ligado | Ajustes · Tela |
 
 ---
 

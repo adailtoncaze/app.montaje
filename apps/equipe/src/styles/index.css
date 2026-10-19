@@ -36,6 +36,12 @@ body {
   outline-offset: 2px;
 }
 
+/* APP-28 — modo sol: contorno de foco mais grosso e escuro, para uso na rua. */
+html[data-contraste='sol'] :focus-visible {
+  outline-width: 3px;
+  outline-color: #000000;
+}
+
 /* Área segura (iOS/PWA) disponível para os componentes que precisarem. */
 :root {
   --montaje-safe-area-top: env(safe-area-inset-top, 0px);

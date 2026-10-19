@@ -1,7 +1,7 @@
-export { ProvedorMontaje, useTema, CHAVE_TEMA } from './tema/ProvedorMontaje';
-export type { ProvedorMontajeProps, Tema, TemaContexto } from './tema/ProvedorMontaje';
+export { ProvedorMontaje, useTema, CHAVE_TEMA, CHAVE_CONTRASTE } from './tema/ProvedorMontaje';
+export type { ProvedorMontajeProps, Tema, Contraste, TemaContexto } from './tema/ProvedorMontaje';
 
-export { marcaIndigo, temaClaro, temaEscuro } from './tema/temas';
+export { marcaIndigo, temaClaro, temaEscuro, temaSol } from './tema/temas';
 
 export { pontoTablet, pontoDesktop, pontoAmplo } from './tema/breakpoints';
 

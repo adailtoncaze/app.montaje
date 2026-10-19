@@ -8,16 +8,23 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { temaClaro, temaEscuro } from './temas';
+import { temaClaro, temaEscuro, temaSol } from './temas';
 
 /** Preferência de tema: explícita (claro/escuro) ou seguindo o sistema. */
 export type Tema = 'claro' | 'escuro' | 'sistema';
 
+/** Preferência de contraste: padrão ou "sol" (alto contraste para uso na rua). */
+export type Contraste = 'padrao' | 'sol';
+
 /** Chave usada para persistir a preferência (também lida pelo anti-flash do index.html). */
 export const CHAVE_TEMA = 'montaje.equipe.tema';
 
+/** Chave da preferência de alto contraste ("modo sol"). */
+export const CHAVE_CONTRASTE = 'montaje.equipe.contraste';
+
 const COR_BARRA_CLARA = '#4f46e5';
 const COR_BARRA_ESCURA = '#100e25';
+const COR_BARRA_SOL = '#312e81';
 
 export interface TemaContexto {
   /** Preferência escolhida pelo usuário (pode ser `sistema`). */
@@ -28,6 +35,12 @@ export interface TemaContexto {
   definirTema: (tema: Tema) => void;
   /** Alterna entre claro e escuro com base no tema efetivo atual. */
   alternarTema: () => void;
+  /** `true` quando o modo sol (alto contraste) está ligado. */
+  modoSol: boolean;
+  /** Liga/desliga o modo sol e persiste em `localStorage`. */
+  definirModoSol: (ligado: boolean) => void;
+  /** Alterna o modo sol com base no estado atual. */
+  alternarModoSol: () => void;
 }
 
 const TemaCtx = createContext<TemaContexto>({
@@ -35,6 +48,9 @@ const TemaCtx = createContext<TemaContexto>({
   temaEscuro: false,
   definirTema: () => {},
   alternarTema: () => {},
+  modoSol: false,
+  definirModoSol: () => {},
+  alternarModoSol: () => {},
 });
 
 /** Acessa e altera o tema do design system do MontaJE. */
@@ -52,18 +68,33 @@ function lerPreferencia(padrao: Tema): Tema {
   return padrao;
 }
 
+/** Lê a preferência de modo sol persistida (padrão: desligado). */
+function lerModoSol(): boolean {
+  try {
+    return localStorage.getItem(CHAVE_CONTRASTE) === 'sol';
+  } catch {
+    return false;
+  }
+}
+
 function sistemaEscuro(): boolean {
   if (typeof window === 'undefined' || !window.matchMedia) return false;
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-/** Atualiza `<meta name="theme-color">` e o atributo de tema do `<html>`. */
-function aplicarAoSistema(escuro: boolean) {
+/** Atualiza `<meta name="theme-color">` e os atributos de tema/contraste do `<html>`. */
+function aplicarAoSistema(escuro: boolean, modoSol: boolean) {
   if (typeof document === 'undefined') return;
   document.documentElement.dataset.tema = escuro ? 'escuro' : 'claro';
+  document.documentElement.dataset.contraste = modoSol ? 'sol' : 'padrao';
   document.documentElement.style.colorScheme = escuro ? 'dark' : 'light';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', escuro ? COR_BARRA_ESCURA : COR_BARRA_CLARA);
+  if (meta) {
+    meta.setAttribute(
+      'content',
+      escuro ? COR_BARRA_ESCURA : modoSol ? COR_BARRA_SOL : COR_BARRA_CLARA,
+    );
+  }
 }
 
 export interface ProvedorMontajeProps {
@@ -82,6 +113,7 @@ export interface ProvedorMontajeProps {
 export function ProvedorMontaje({ temaInicial = 'sistema', children }: ProvedorMontajeProps) {
   const [tema, setTema] = useState<Tema>(() => lerPreferencia(temaInicial));
   const [escuroDoSistema, setEscuroDoSistema] = useState<boolean>(() => sistemaEscuro());
+  const [modoSol, setModoSol] = useState<boolean>(() => lerModoSol());
 
   // Acompanha o SO quando a preferência é "sistema".
   useEffect(() => {
@@ -93,13 +125,15 @@ export function ProvedorMontaje({ temaInicial = 'sistema', children }: ProvedorM
     return () => media.removeEventListener('change', ouvir);
   }, [tema]);
 
-  const temaEscuroAtivo = tema === 'escuro' || (tema === 'sistema' && escuroDoSistema);
+  // O modo sol é sempre claro (alto contraste); ele tem precedência sobre a
+  // preferência de tema escuro.
+  const temaEscuroAtivo = !modoSol && (tema === 'escuro' || (tema === 'sistema' && escuroDoSistema));
 
-  // Mantém o documento (meta theme-color, color-scheme e atributo do <html>)
+  // Mantém o documento (meta theme-color, color-scheme e atributos do <html>)
   // coerente com o tema aplicado — inclusive após o primeiro paint.
   useEffect(() => {
-    aplicarAoSistema(temaEscuroAtivo);
-  }, [temaEscuroAtivo]);
+    aplicarAoSistema(temaEscuroAtivo, modoSol);
+  }, [temaEscuroAtivo, modoSol]);
 
   const definirTema = useCallback((novo: Tema) => {
     setTema(novo);
@@ -124,12 +158,41 @@ export function ProvedorMontaje({ temaInicial = 'sistema', children }: ProvedorM
     });
   }, []);
 
+  const definirModoSol = useCallback((ligado: boolean) => {
+    setModoSol(ligado);
+    try {
+      localStorage.setItem(CHAVE_CONTRASTE, ligado ? 'sol' : 'padrao');
+    } catch {
+      /* armazenamento indisponível — aplica só nesta sessão */
+    }
+  }, []);
+
+  const alternarModoSol = useCallback(() => {
+    setModoSol((atual) => {
+      const proximo = !atual;
+      try {
+        localStorage.setItem(CHAVE_CONTRASTE, proximo ? 'sol' : 'padrao');
+      } catch {
+        /* armazenamento indisponível */
+      }
+      return proximo;
+    });
+  }, []);
+
   const valor = useMemo<TemaContexto>(
-    () => ({ tema, temaEscuro: temaEscuroAtivo, definirTema, alternarTema }),
-    [tema, temaEscuroAtivo, definirTema, alternarTema],
+    () => ({
+      tema,
+      temaEscuro: temaEscuroAtivo,
+      definirTema,
+      alternarTema,
+      modoSol,
+      definirModoSol,
+      alternarModoSol,
+    }),
+    [tema, temaEscuroAtivo, definirTema, alternarTema, modoSol, definirModoSol, alternarModoSol],
   );
 
-  const theme: Theme = temaEscuroAtivo ? temaEscuro : temaClaro;
+  const theme: Theme = modoSol ? temaSol : temaEscuroAtivo ? temaEscuro : temaClaro;
 
   return (
     <TemaCtx.Provider value={valor}>
