@@ -1,9 +1,10 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatarDataCurta, hojeLocal } from '@/lib/datas';
+import { hojeLocal } from '@/lib/datas';
 import {
   ROTULO_ETAPA,
   rotuloPeriodo,
+  tituloDocumento,
   type DiaDocumento,
   type EquipeDocumento,
   type EtapaDocumento,
@@ -15,12 +16,15 @@ import {
  * Geração do PDF "Cronograma de Montagem de Seção" (Gestão → Relatórios).
  *
  * O documento segue o layout do modelo oficial do cartório (A4 paisagem):
- * cabeçalho institucional, título centralizado, e — por equipe, que começa em
- * uma folha nova — membros e as tabelas de cada etapa/dia na ordem de visita.
+ * cabeçalho institucional, título centralizado — que muda com a etapa filtrada
+ * ("Cronograma de Montagem" ou "Cronograma de Instalação da Urna") — e, por
+ * equipe, que começa em uma folha nova, membros e as tabelas de cada etapa/dia
+ * na ordem de visita. Cada tabela fecha com a linha "Total de Seções".
  * As colunas são apenas campos existentes no sistema: sequência, local com
- * endereço (nome em negrito, endereço em corpo menor), quantidade de seções,
- * tipo de atividade e data. Horário e origem do modelo ficam de fora até haver
- * cadastro para eles; o município da zona é fixo (`MUNICIPIO`).
+ * endereço (nome em negrito, endereço em corpo menor), a lista das seções do
+ * local em uma única linha e a quantidade de seções. Horário e origem do modelo
+ * ficam de fora até haver cadastro para eles; o município da zona é fixo
+ * (`MUNICIPIO`).
  *
  * Rodapé com emissão e paginação é carimbado em todas as folhas ao final, quando
  * o total de páginas é conhecido.
@@ -40,7 +44,6 @@ const BASE = 194;
 const TINTA_ESCURA: [number, number, number] = [17, 24, 39];
 const TINTA_CINZA: [number, number, number] = [107, 114, 128];
 
-const TITULO_DOCUMENTO = 'Cronograma de Montagem de Seção';
 const ORGAO = 'Poder Judiciário';
 const CORTE = 'Tribunal Regional Eleitoral da Paraíba';
 const SISTEMA =
@@ -159,11 +162,12 @@ const ALTURA_LINHA_TABELA =
 const ALTURA_CABECALHO_TABELA = alturaTinta(FONTE_TABELA) + PADDING_CELULA * 2;
 
 /**
- * Reserva o topo da tabela do dia: cabeçalho da tabela + a primeira linha do
- * corpo. Sem isso a tabela poderia começar tão perto da BASE que a última
- * linha cairia sobre o rodapé.
+ * Reserva o topo da tabela do dia: cabeçalho + a primeira linha do corpo +
+ * a linha de total. Sem isso a tabela poderia começar tão perto da BASE que a
+ * última linha (ou o próprio total) cairia sobre o rodapé.
  */
-const TOPO_MINIMO_TABELA = ALTURA_LINHA_TABELA * 3;
+const TOPO_MINIMO_TABELA =
+  ALTURA_CABECALHO_TABELA * 2 + ALTURA_LINHA_TABELA;
 
 /** Rodapé de todas as folhas: emissão e paginação (total conhecido só no fim). */
 function desenharRodape(doc: jsPDF, emitidoEm: Date): void {
@@ -211,30 +215,47 @@ function desenharMembros(doc: jsPDF, estado: Estado, membros: MembroRelatorio[])
   }
 }
 
+/** Soma das seções dos locais listados no dia (linha "Total de Seções"). */
+function somaSecoes(dia: DiaDocumento): number {
+  return dia.escalas.reduce((total, escala) => total + escala.qtdSecoes, 0);
+}
+
+/** "12, 13, 14" — seções do local em uma única linha (célula usa `ellipsize`). */
+function listaDeSecoes(secoes: number[]): string {
+  return secoes.join(', ');
+}
+
 function desenharTabelaDoDia(
   doc: jsPDF,
   estado: Estado,
   dia: DiaDocumento,
-  etapa: EtapaDocumento,
 ): void {
   // Corpo do nome do local e do endereço (menor), com a métrica de tinta
   // compartilhada com a reserva de altura.
   const FONTE = FONTE_TABELA;
   const FONTE_ENDERECO = FONTE_ENDERECO_TABELA;
-
   autoTable(doc, {
     startY: estado.y,
     theme: 'grid',
     // Uma linha (local + endereço) nunca é partida ao meio entre folhas.
     rowPageBreak: 'avoid',
-    head: [['Seq.', 'Local de votação', 'Qtd. seções', 'Tipo de atividade', 'Data']],
+    // O total do dia só aparece ao final da tabela, não repetido por folha.
+    showFoot: 'lastPage',
+    head: [['Seq.', 'Local de votação', 'Seções', 'Qtd. seções']],
     body: dia.escalas.map((escala) => [
       escala.ordem != null ? String(escala.ordem) : '—',
       escala.local.nome,
+      listaDeSecoes(escala.secoes),
       String(escala.qtdSecoes),
-      ROTULO_ETAPA[etapa.etapa],
-      formatarDataCurta(dia.data),
     ]),
+    // Soma das seções do dia, na última linha da tabela. O rótulo ocupa as
+    // colunas do início e o valor fica na coluna "Qtd. seções", centralizado.
+    foot: [
+      [
+        { content: 'Total de Seções:', colSpan: 3, styles: { halign: 'right' as const } },
+        { content: String(somaSecoes(dia)), styles: { halign: 'center' as const } },
+      ],
+    ],
     // Nome e endereço são desenhados juntos, como um bloco de duas linhas
     // centralizado na célula — assim o nome não herda sozinho a centralização
     // de uma linha só (que empurrava o texto para baixo, sobre a borda).
@@ -326,12 +347,22 @@ function desenharTabelaDoDia(
       // Mesma altura das linhas do corpo: sem folga entre cabeçalho e dados.
       minCellHeight: ALTURA_CABECALHO_TABELA,
     },
+    // Linha de total: fundo claro e negrito, sem a linha do endereço (só tem
+    // uma linha de texto, então usa a altura do cabeçalho).
+    footStyles: {
+      fillColor: [244, 244, 245],
+      fontStyle: 'bold',
+      textColor: TINTA_ESCURA,
+      valign: 'middle',
+      minCellHeight: ALTURA_CABECALHO_TABELA,
+    },
     columnStyles: {
       0: { cellWidth: 12, halign: 'center' },
-      1: { cellWidth: 169 },
-      2: { cellWidth: 22, halign: 'center' },
-      3: { cellWidth: 46 },
-      4: { cellWidth: 24, halign: 'center' },
+      1: { cellWidth: 120 },
+      // Lista de seções em uma única linha: `ellipsize` trunca com reticência
+      // em vez de quebrar a linha no meio da lista.
+      2: { cellWidth: 119, overflow: 'ellipsize' },
+      3: { cellWidth: 22, halign: 'center' },
     },
     margin: { top: TOPO_PADRAO, bottom: 16, left: MARGEM_LATERAL, right: MARGEM_LATERAL },
     didDrawPage: () => {
@@ -366,7 +397,7 @@ function desenharEtapa(doc: jsPDF, estado: Estado, bloco: EtapaDocumento): void 
     doc.setTextColor(...TINTA_ESCURA);
     doc.text(dia.rotulo, MARGEM_LATERAL, estado.y);
     estado.y += 5.5;
-    desenharTabelaDoDia(doc, estado, dia, bloco);
+    desenharTabelaDoDia(doc, estado, dia);
   }
   estado.y += 3;
 }
@@ -378,7 +409,8 @@ function desenharEquipe(doc: jsPDF, estado: Estado, equipe: EquipeDocumento): vo
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(...TINTA_ESCURA);
-  doc.text(`Equipe: ${equipe.nome}`, MARGEM_LATERAL, estado.y);
+  // Só o nome da equipe: o prefixo "Equipe:" repetia o que o nome já diz.
+  doc.text(equipe.nome, MARGEM_LATERAL, estado.y);
   estado.y += 7;
 
   desenharMembros(doc, estado, equipe.membros);
@@ -409,9 +441,12 @@ export function montarPdfCronograma(
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const estado: Estado = { y: TOPO_TITULO, cabecalhoNaPagina: 0 };
   const subtitulo = subtituloRelatorio(relatorio);
+  // O título muda com a etapa filtrada: "Cronograma de Montagem" ou
+  // "Cronograma de Instalação da Urna".
+  const titulo = tituloDocumento(relatorio.etapa);
 
   doc.setProperties({
-    title: TITULO_DOCUMENTO,
+    title: titulo,
     subject: subtitulo || 'Cronograma de montagem',
     author: 'MontaJE',
     creator: 'MontaJE',
@@ -422,7 +457,7 @@ export function montarPdfCronograma(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(...TINTA_ESCURA);
-  doc.text(TITULO_DOCUMENTO, LARGURA / 2, 34, { align: 'center' });
+  doc.text(titulo, LARGURA / 2, 34, { align: 'center' });
 
   if (subtitulo) {
     doc.setFont('helvetica', 'normal');

@@ -19,6 +19,21 @@ export const ROTULO_ETAPA: Record<Etapa, string> = {
   2: 'Etapa 2 — Instalação da Urna',
 };
 
+/** Tipo de atividade da etapa, usado no título do documento. */
+const TIPO_ATIVIDADE: Record<Etapa, string> = {
+  1: 'Montagem',
+  2: 'Instalação da Urna',
+};
+
+/**
+ * Título do documento: "Cronograma de Montagem" ou "Cronograma de Instalação
+ * da Urna", conforme a etapa filtrada. Sem filtro de etapa, as duas aparecem
+ * no mesmo documento e o título volta ao genérico.
+ */
+export function tituloDocumento(etapa: 'todas' | Etapa): string {
+  return etapa === 'todas' ? 'Cronograma de Montagem de Seção' : `Cronograma de ${TIPO_ATIVIDADE[etapa]}`;
+}
+
 const FORMATO_DIA = new Intl.DateTimeFormat('pt-BR', {
   weekday: 'long',
   day: '2-digit',
@@ -57,6 +72,8 @@ export interface EscalaDocumento {
   id: string;
   ordem: number | null;
   local: { nome: string; zona: number; endereco: string | null };
+  /** Números das seções cadastradas no local, em ordem crescente. */
+  secoes: number[];
   /** Quantidade de seções cadastradas no local. */
   qtdSecoes: number;
 }
@@ -94,6 +111,8 @@ export interface RelatorioCronograma {
   periodo: { de: string | null; ate: string | null };
   /** Zonas eleitorais presentes no recorte, em ordem crescente. */
   zonas: number[];
+  /** Etapa filtrada (`'todas'` = documento com as duas etapas). */
+  etapa: 'todas' | Etapa;
   totais: TotaisRelatorio;
   /** Equipes em ordem alfabética, cada uma com etapas e dias. */
   equipes: EquipeDocumento[];
@@ -161,6 +180,7 @@ export function montarRelatorio(
 
   const paraEscala = (escala: EscalaDetalhe): EscalaDocumento => {
     const local = locaisPorId.get(escala.local_id);
+    const secoes = (local?.secoes ?? []).map((secao) => secao.numero);
     return {
       id: escala.id,
       ordem: escala.ordem,
@@ -169,7 +189,8 @@ export function montarRelatorio(
         zona: local?.zona ?? escala.localZona ?? 0,
         endereco: local?.endereco ?? null,
       },
-      qtdSecoes: local?.secoes.length ?? 0,
+      secoes,
+      qtdSecoes: secoes.length,
     };
   };
 
@@ -247,6 +268,7 @@ export function montarRelatorio(
   return {
     periodo,
     zonas: [...zonas].sort((a, b) => a - b),
+    etapa: filtro.etapa,
     totais: {
       escalas: selecionadas.length,
       equipes: equipesDocumento.length,
