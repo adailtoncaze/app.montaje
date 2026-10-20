@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SelectBusca } from '@/components/ui/select-busca';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AreaRestrita } from '@/components/area-restrita';
@@ -458,6 +459,18 @@ function DialogoEscala({
   const listaEquipes = equipes ?? [];
   const listaLocais = locais ?? [];
 
+  // Opções do seletor de local: o rótulo mostra zona e nome; o endereço entra
+  // apenas como texto de busca, para achar o local sem poluir a lista.
+  const opcoesLocais = useMemo(
+    () =>
+      listaLocais.map((local) => ({
+        value: local.id,
+        label: `${local.zona}ª zona · ${local.nome}`,
+        busca: local.endereco ?? undefined,
+      })),
+    [listaLocais],
+  );
+
   // Preenche com os dados da escala toda vez que o diálogo abre, sem deixar o
   // estado de uma edição anterior vazando para a próxima.
   useEffect(() => {
@@ -554,7 +567,7 @@ function DialogoEscala({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1">Etapa 1 — Montagem</SelectItem>
-                  <SelectItem value="2">Etapa 2 — Conferência</SelectItem>
+                  <SelectItem value="2">Etapa 2 — Instalação da Urna</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -583,23 +596,15 @@ function DialogoEscala({
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="escala-local">Local de votação</Label>
-            <Select value={localId} onValueChange={setLocalId}>
-              <SelectTrigger id="escala-local">
-                <SelectValue placeholder="Selecione o local" />
-              </SelectTrigger>
-              <SelectContent>
-                {listaLocais.length === 0 && (
-                  <SelectItem value="sem-locais" disabled>
-                    Cadastre um local primeiro
-                  </SelectItem>
-                )}
-                {listaLocais.map((local) => (
-                  <SelectItem key={local.id} value={local.id}>
-                    {local.zona}ª zona · {local.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SelectBusca
+              id="escala-local"
+              value={localId}
+              onValueChange={setLocalId}
+              placeholder="Selecione o local"
+              placeholderBusca="Buscar por nome"
+              mensagemVazia="Cadastre um local primeiro"
+              opcoes={opcoesLocais}
+            />
           </div>
 
           <div className="flex flex-col gap-2">
