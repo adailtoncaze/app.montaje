@@ -6,8 +6,6 @@ import { AppShell } from './app/AppShell';
 import { MeusLocais } from '@/features/locais/MeusLocais';
 import { LocalDetalhe } from '@/features/locais/LocalDetalhe';
 import { SecaoDetalhe } from '@/features/secoes/SecaoDetalhe';
-import { ChecklistEtapa } from '@/features/secoes/ChecklistEtapa';
-import { ResumoEtapa } from '@/features/secoes/ResumoEtapa';
 import { Sincronizacao } from '@/features/sync/Sincronizacao';
 import { Configuracoes } from '@/features/config/Configuracoes';
 import { Manual } from '@/features/ajuda/Manual';

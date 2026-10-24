@@ -2,8 +2,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ROTULO_STATUS_ETAPA,
-  etapaLiberada,
-  motivoBloqueioEtapa2,
   perguntaDeSigilo,
   type Etapa,
 } from '@montaje/core';

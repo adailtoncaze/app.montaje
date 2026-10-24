@@ -3,8 +3,6 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ROTULO_STATUS_ETAPA,
-  etapaLiberada,
-  motivoBloqueioEtapa2,
   type Etapa,
   type StatusEtapa,
 } from '@montaje/core';
@@ -181,9 +179,6 @@ export function SecaoDetalhe() {
     );
   }
 
-  const etapa2Liberada = etapaLiberada(2, secao.status_etapa1);
-  const bloqueio2 = motivoBloqueioEtapa2(secao.status_etapa1);
-
   const conta = (etapa: Etapa) => {
     const daEtapa = itens.filter((i) => i.etapa === etapa);
     return {
@@ -192,7 +187,6 @@ export function SecaoDetalhe() {
     };
   };
   const e1 = conta(1);
-  const e2 = conta(2);
 
   // Última devolução do cartório por etapa (motivo da correção a ser feita em campo).
   // Só aparece enquanto a etapa está realmente devolvida — some ao reenviar/aprovar.
