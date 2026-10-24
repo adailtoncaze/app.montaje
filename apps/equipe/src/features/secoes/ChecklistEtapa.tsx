@@ -101,8 +101,8 @@ export function ChecklistEtapa() {
   const sigiloItens = ordenados.filter((i) => perguntaDeSigilo(i.nome));
   const demaisItens = ordenados.filter((i) => !perguntaDeSigilo(i.nome));
 
-  const bloqueada = etapa === 2 && secao ? !etapaLiberada(2, secao.status_etapa1) : false;
-  const motivo = secao ? motivoBloqueioEtapa2(secao.status_etapa1) : null;
+  const bloqueada = false;
+  const motivo = null;
 
   // Última devolução do cartório para esta etapa. Fica visível já nesta tela
   // (sem precisar abrir o resumo): a equipe vê o motivo e qual item corrigir.
@@ -146,11 +146,11 @@ export function ChecklistEtapa() {
           </>
         ) : (
           <>
-            {correcao && (
+            {(correcao || statusEtapa === 'correcao_solicitada') && (
               <Aviso
                 tom="erro"
                 titulo={
-                  correcao.status === 'reabertura'
+                  correcao?.status === 'reabertura'
                     ? 'Etapa reaberta pelo cartório'
                     : 'Correção solicitada pelo cartório'
                 }
@@ -160,7 +160,12 @@ export function ChecklistEtapa() {
                     Item a corrigir: {itemDevolvido}
                   </Text>
                 )}
-                {correcao.comentario && (
+                {(correcao?.comentario || correcao === undefined) && statusEtapa === 'correcao_solicitada' && !correcao && (
+                  <Text size={200} block>
+                    O cartório solicitou correções nesta etapa. Revise o checklist e reenvie após ajustar os itens.
+                  </Text>
+                )}
+                {correcao?.comentario && (
                   <Text size={200} block>
                     {correcao.comentario}
                   </Text>

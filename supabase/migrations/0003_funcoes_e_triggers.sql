@@ -125,11 +125,7 @@ begin
     into v_atual, v_outra
   from secoes where id = p_secao;
 
-  -- Etapa 2 so libera se a Etapa 1 estiver aprovada (regra 5 do PRD)
-  if p_etapa = 2 and v_outra <> 'aprovada'
-     and p_novo in ('em_montagem','enviada') then
-    raise exception 'Etapa 2 bloqueada: Etapa 1 nao aprovada';
-  end if;
+  -- Etapa 2 liberada independentemente da Etapa 1
 
   -- Transicoes permitidas para a equipe
   if not (

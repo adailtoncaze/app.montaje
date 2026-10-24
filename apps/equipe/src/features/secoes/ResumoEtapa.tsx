@@ -233,11 +233,11 @@ export function ResumoEtapa() {
               </Aviso>
             )}
 
-            {correcao && !jaEnviada && (
+            {(correcao || statusAtual === 'correcao_solicitada') && !jaEnviada && (
               <Aviso
                 tom="erro"
                 titulo={
-                  correcao.status === 'reabertura'
+                  correcao?.status === 'reabertura'
                     ? 'Etapa reaberta pelo cartório'
                     : 'Correção solicitada pelo cartório'
                 }
@@ -248,7 +248,10 @@ export function ResumoEtapa() {
                   </Text>
                 )}
                 <Text size={200} block>
-                  {correcao.comentario ?? 'Corrija os itens indicados e reenvie a etapa.'}
+                  {correcao?.comentario ??
+                    (statusAtual === 'correcao_solicitada'
+                      ? 'O cartório solicitou correções nesta etapa. Revise o checklist e reenvie após ajustar os itens.'
+                      : 'Corrija os itens indicados e reenvie a etapa.')}
                 </Text>
               </Aviso>
             )}

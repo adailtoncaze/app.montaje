@@ -282,17 +282,6 @@ export function SecaoDetalhe() {
             total={e1.total}
             aoAbrir={abrirEtapa}
           />
-
-          <CartaoEtapa
-            etapa={2}
-            status={secao.status_etapa2}
-            bloqueada={!etapa2Liberada}
-            motivo={bloqueio2}
-            href={`/locais/${localId}/secoes/${secao.id}/etapa/2`}
-            concluidos={e2.concluidos}
-            total={e2.total}
-            aoAbrir={abrirEtapa}
-          />
         </div>
       </ConteudoPagina>
     </>

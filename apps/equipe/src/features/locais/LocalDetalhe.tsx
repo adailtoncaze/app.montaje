@@ -120,7 +120,7 @@ export function LocalDetalhe() {
   }
 
   const aprovadas = listaSecoes.filter(
-    (s) => s.status_etapa1 === 'aprovada' && s.status_etapa2 === 'aprovada',
+    (s) => s.status_etapa1 === 'aprovada',
   ).length;
   const naoConformes = listaSecoes.filter((s) => !s.conforme).length;
 
@@ -196,9 +196,7 @@ export function LocalDetalhe() {
               .sort((a, b) => a.numero - b.numero)
               .map((s) => {
                 const e1 = progresso(s.id, 1);
-                const e2 = progresso(s.id, 2);
-                const concluida =
-                  s.status_etapa1 === 'aprovada' && s.status_etapa2 === 'aprovada';
+                const concluida = s.status_etapa1 === 'aprovada';
 
                 return (
                   <Cartao
@@ -238,22 +236,7 @@ export function LocalDetalhe() {
                         />
                       )}
 
-                      <div className={c.linha}>
-                        <Text size={200} className={c.rotulo}>
-                          Etapa 2
-                        </Text>
-                        <Selo
-                          texto={ROTULO_STATUS_ETAPA[s.status_etapa2]}
-                          tom={tomStatusEtapa(s.status_etapa2)}
-                        />
-                      </div>
-                      {e2.total > 0 && (
-                        <BarraProgresso
-                          concluidos={e2.concluidos}
-                          total={e2.total}
-                          rotulo={`Etapa 2 · ${e2.concluidos} de ${e2.total} itens`}
-                        />
-                      )}
+
                     </div>
                   </Cartao>
                 );

@@ -39,11 +39,11 @@ export function App() {
           />
           <Route
             path="/locais/:localId/secoes/:secaoId/etapa/:etapa"
-            element={<ChecklistEtapa />}
+            element={<Navigate to="/locais" replace />}
           />
           <Route
             path="/locais/:localId/secoes/:secaoId/etapa/:etapa/resumo"
-            element={<ResumoEtapa />}
+            element={<Navigate to="/locais" replace />}
           />
           <Route path="/sincronizacao" element={<Sincronizacao />} />
           <Route path="/config" element={<Configuracoes />} />

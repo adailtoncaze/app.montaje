@@ -49,7 +49,7 @@ create policy locais_admin on locais for all
 create policy secoes_select on secoes for select
   using (is_cartorio() or pode_ver_secao(id));
 create policy secoes_update_equipe on secoes for update
-  using (pode_ver_secao(id)) with check (pode_ver_secao(id));
+  using (pode_ver_secao(id) or is_cartorio()) with check (pode_ver_secao(id) or is_cartorio());
 create policy secoes_admin on secoes for all
   using (is_admin()) with check (is_admin());
 
@@ -107,5 +107,7 @@ create policy valid_select on validacoes for select
   using (is_cartorio() or pode_ver_secao(secao_id));
 create policy valid_insert_cartorio on validacoes for insert
   with check (is_cartorio() and validador_id = auth.uid());
+create policy valid_update_cartorio on validacoes for update
+  using (is_cartorio()) with check (is_cartorio());
 create policy valid_admin on validacoes for all
   using (is_admin()) with check (is_admin());

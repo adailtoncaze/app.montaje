@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -272,7 +272,7 @@ function PainelValidacao({
   ultima: ValidacaoComAutor | null;
   onValidado: () => void;
 }) {
-  const [itemId, setItemId] = useState<string | null>(null);
+  const [itensSelecionados, setItensSelecionados] = useState<string[]>([]);
   const [comentario, setComentario] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -300,8 +300,8 @@ function PainelValidacao({
     }
 
     if (novoStatus === 'correcao_solicitada') {
-      if (!itemId) {
-        const mensagem = 'Selecione o item que deve ser corrigido.';
+      if (itensSelecionados.length === 0) {
+        const mensagem = 'Selecione pelo menos um item que deve ser corrigido.';
         setErro(mensagem);
         toast.error('Falta o item a corrigir', { description: mensagem });
         return;
@@ -314,12 +314,22 @@ function PainelValidacao({
       }
     }
 
+    const itensNomes = itensSelecionados
+      .map((id) => nomeDoItem(id))
+      .filter(Boolean);
+    const comentarioFinal =
+      novoStatus === 'correcao_solicitada'
+        ? itensNomes.length > 0
+          ? `Itens: ${itensNomes.join(', ')}. ${comentario.trim()}`
+          : comentario.trim()
+        : null;
+
     const entrada: ValidacaoInput = {
       secao_id: detalhe.secao.id,
       etapa,
       status: novoStatus,
-      item_devolvido: novoStatus === 'correcao_solicitada' ? itemId : null,
-      comentario: novoStatus === 'correcao_solicitada' ? comentario.trim() : null,
+      item_devolvido: novoStatus === 'correcao_solicitada' ? itensSelecionados[0] : null,
+      comentario: comentarioFinal,
     };
 
     setEnviando(true);
@@ -340,7 +350,7 @@ function PainelValidacao({
         });
       }
       setComentario('');
-      setItemId(null);
+      setItensSelecionados([]);
       onValidado();
     } catch (causa) {
       const mensagem = mensagemDeErro(causa, 'Falha ao registrar a validação.');
@@ -534,19 +544,33 @@ function PainelValidacao({
         )}
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="item-corrigir">Item a corrigir</Label>
-          <Select value={itemId ?? undefined} onValueChange={(v) => setItemId(v)}>
-            <SelectTrigger id="item-corrigir" aria-label="Item a corrigir">
-              <SelectValue placeholder="Selecione o item (obrigatório para devolver)" />
-            </SelectTrigger>
-            <SelectContent>
-              {itensEtapa.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Itens a corrigir (múltiplos)</Label>
+          <div className="flex max-h-48 flex-col gap-2 overflow-auto rounded-md border border-border p-2">
+            {itensEtapa.map((item) => {
+              const checked = itensSelecionados.includes(item.id);
+              return (
+                <label key={item.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setItensSelecionados((prev) => [...prev, item.id]);
+                      } else {
+                        setItensSelecionados((prev) => prev.filter((id) => id !== item.id));
+                      }
+                    }}
+                  />
+                  <span className="truncate">{item.nome}</span>
+                </label>
+              );
+            })}
+          </div>
+          {itensSelecionados.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {itensSelecionados.length} item(ns) selecionado(s)
+            </span>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -589,7 +613,7 @@ function PainelValidacao({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          A devolução exige selecionar o item e escrever o comentário.
+          A devolução exige selecionar pelo menos um item e escrever o comentário.
         </p>
 
         {!conforme && (
@@ -773,6 +797,12 @@ export function SecaoDetalhe() {
   const [etapa, setEtapa] = useState<Etapa>(1);
   const [foto, setFoto] = useState<FotoAberta | null>(null);
 
+  useEffect(() => {
+    if (etapa === 2) {
+      setEtapa(1);
+    }
+  }, [etapa]);
+
   const { data, isLoading, error } = useSecao(secaoId);
   useAvisoErro(error);
 
@@ -872,10 +902,19 @@ export function SecaoDetalhe() {
         </Alert>
       )}
 
-      <Tabs value={String(etapa)} onValueChange={(v) => setEtapa(Number(v) as Etapa)}>
+      <Tabs
+        value={String(etapa)}
+        onValueChange={(v) => {
+          const next = Number(v) as Etapa;
+          if (next === 2) return;
+          setEtapa(next);
+        }}
+      >
         <TabsList className="grid w-full grid-cols-2 sm:max-w-md">
           <TabsTrigger value="1">Etapa 1 · Montagem</TabsTrigger>
-          <TabsTrigger value="2">Etapa 2 · Instalação da Urna</TabsTrigger>
+          <TabsTrigger value="2" disabled className="opacity-60 cursor-not-allowed" aria-disabled="true">
+            Etapa 2 · Instalação da Urna
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -964,6 +1003,8 @@ export function SecaoDetalhe() {
               onValidado={recarregar}
             />
           )}
+
+
 
           <ResumoEtapa
             etapa={etapa}

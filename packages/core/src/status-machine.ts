@@ -28,24 +28,14 @@ export function proximoStatus(de: StatusEtapa): StatusEtapa | null {
   return TRANSICOES_EQUIPE[de][0] ?? null;
 }
 
-/** A Etapa 2 so pode iniciar quando a Etapa 1 estiver aprovada (regra 5). */
-export function etapaLiberada(etapa: Etapa, statusEtapa1: StatusEtapa): boolean {
-  if (etapa === 1) return true;
-  return statusEtapa1 === 'aprovada';
+/** Etapa 2 liberada independentemente da Etapa 1. */
+export function etapaLiberada(_etapa: Etapa, _statusEtapa1: StatusEtapa): boolean {
+  return true;
 }
 
-/** Motivo de bloqueio da Etapa 2, para exibir na tela (RF-E30). */
-export function motivoBloqueioEtapa2(statusEtapa1: StatusEtapa): string | null {
-  switch (statusEtapa1) {
-    case 'aprovada':
-      return null;
-    case 'correcao_solicitada':
-      return 'Etapa 1 com correção solicitada pelo cartório. Corrija e reenvie.';
-    case 'enviada':
-      return 'Aguardando validação da Etapa 1 pelo cartório.';
-    default:
-      return 'Conclua e envie a Etapa 1 primeiro.';
-  }
+/** Motivo de bloqueio da Etapa 2 - sempre liberada. */
+export function motivoBloqueioEtapa2(_statusEtapa1: StatusEtapa): string | null {
+  return null;
 }
 
 /** A secao so fica aprovada quando as duas etapas estiverem aprovadas (regra 9). */
