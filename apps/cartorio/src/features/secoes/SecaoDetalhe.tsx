@@ -23,21 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,7 +48,6 @@ import {
   type ValidacaoInput,
 } from '@montaje/core';
 import {
-  reabrirEtapa,
   useSecao,
   validarSecao,
   type SecaoDetalhe as DetalheSecao,
@@ -277,8 +263,6 @@ function PainelValidacao({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
-  const [reabrindo, setReabrindo] = useState(false);
-  const [motivoReabertura, setMotivoReabertura] = useState('');
 
   const itensEtapa = useMemo(
     () => detalhe.itens.filter((item) => item.etapa === etapa),
@@ -361,128 +345,18 @@ function PainelValidacao({
     }
   }
 
-  /** Etapa 1 reaberta também derruba a Etapa 2 (regra 5), se ela já começou. */
-  const cascataEtapa2 = etapa === 1 && detalhe.secao.status_etapa2 !== 'pendente';
-
-  async function reabrir() {
-    setErro(null);
-    setSucesso(null);
-    setEnviando(true);
-    try {
-      await reabrirEtapa(detalhe.secao.id, etapa, motivoReabertura);
-      toast.success('Etapa reaberta', {
-        description: cascataEtapa2
-          ? 'As duas etapas voltaram para correção; a equipe foi notificada.'
-          : 'A equipe foi notificada para revisar e reenviar a etapa.',
-      });
-      setReabrindo(false);
-      setMotivoReabertura('');
-      onValidado();
-    } catch (causa) {
-      const mensagem = mensagemDeErro(causa, 'Falha ao reabrir a etapa.');
-      setErro(mensagem);
-      toast.error('Não foi possível reabrir', { description: mensagem });
-    } finally {
-      setEnviando(false);
-    }
-  }
-
   if (status !== 'enviada') {
     if (status === 'aprovada') {
       return (
-        <>
-          <Alert variant="success">
-            <AlertIcon>
-              <CircleCheck />
-            </AlertIcon>
-            <AlertDescription>
-              <strong className="block">Etapa {etapa} aprovada</strong>
-              Nenhuma ação pendente nesta etapa.
-            </AlertDescription>
-          </Alert>
-
-          <div className="mt-4 flex flex-col gap-2">
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-fit"
-              onClick={() => setReabrindo(true)}
-            >
-              <RefreshCw />
-              Reabrir etapa
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Reabre a aprovação para a equipe revisar o checklist e reenviar. O motivo fica
-              registrado no histórico.
-              {cascataEtapa2 ? ' A Etapa 2 também será reaberta (regra 5).' : ''}
-            </p>
-          </div>
-
-          <Dialog
-            open={reabrindo}
-            onOpenChange={(aberto) => {
-              if (!aberto) {
-                setReabrindo(false);
-                setErro(null);
-              }
-            }}
-          >
-            <DialogContent className="max-w-lg p-0">
-              <div className="border-b border-border p-5 pr-14">
-                <DialogTitle>Reabrir a Etapa {etapa}?</DialogTitle>
-                <DialogDescription>
-                  A etapa volta para correção e a equipe é notificada para revisar e reenviar.
-                  {cascataEtapa2 ? ' A Etapa 2 também será reaberta.' : ''}
-                </DialogDescription>
-              </div>
-
-              <div className="flex flex-col gap-4 p-5">
-                {erro && (
-                  <Alert variant="destructive">
-                    <AlertIcon>
-                      <TriangleAlert />
-                    </AlertIcon>
-                    <AlertDescription>{erro}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <Label htmlFor="motivo-reabertura">Motivo da reabertura</Label>
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      {motivoReabertura.length}/{LIMITE_COMENTARIO}
-                    </span>
-                  </div>
-                  <Textarea
-                    id="motivo-reabertura"
-                    value={motivoReabertura}
-                    maxLength={LIMITE_COMENTARIO}
-                    placeholder="Ex.: a urna foi movida após a aprovação; reanálise da foto 2."
-                    onChange={(e) => setMotivoReabertura(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3">
-                  <Button
-                    variant="outline"
-                    disabled={enviando}
-                    onClick={() => setReabrindo(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={enviando || motivoReabertura.trim().length < 5}
-                    onClick={reabrir}
-                  >
-                    <RefreshCw />
-                    Reabrir etapa
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </>
+        <Alert variant="success">
+          <AlertIcon>
+            <CircleCheck />
+          </AlertIcon>
+          <AlertDescription>
+            <strong className="block">Etapa {etapa} aprovada</strong>
+            Nenhuma ação pendente nesta etapa.
+          </AlertDescription>
+        </Alert>
       );
     }
     if (status === 'correcao_solicitada') {
@@ -731,8 +605,6 @@ function Historico({
                 >
                   {aprovada ? (
                     <CircleCheck className="size-4" />
-                  ) : reabertura ? (
-                    <RefreshCw className="size-4" />
                   ) : (
                     <TriangleAlert className="size-4" />
                   )}
